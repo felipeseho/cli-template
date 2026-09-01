@@ -37,8 +37,13 @@ async function defaultDirectoryExists(directory: string): Promise<boolean> {
 function nodeProbe(nodeVersion: string): DiagnosticProbe {
   return {
     run(): Promise<DiagnosticCheck> {
-      const major = Number.parseInt(nodeVersion.split('.')[0] ?? '', 10)
-      const supported = Number.isFinite(major) && major >= 22
+      const [majorText = '', minorText = ''] = nodeVersion.split('.')
+      const major = Number.parseInt(majorText, 10)
+      const minor = Number.parseInt(minorText, 10)
+      const supported =
+        Number.isFinite(major) &&
+        Number.isFinite(minor) &&
+        (major > 24 || (major === 24 && minor >= 15))
 
       return Promise.resolve(
         supported
@@ -52,7 +57,7 @@ function nodeProbe(nodeVersion: string): DiagnosticProbe {
               id: 'node',
               label: 'Node.js',
               message: `Node.js ${nodeVersion || 'unknown'} is not supported.`,
-              remediation: 'Install Node.js 22 or newer.',
+              remediation: 'Install Node.js 24.15 or newer.',
               status: 'fail',
             },
       )

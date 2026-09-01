@@ -184,10 +184,15 @@ escopo para testes sem alterar o contrato do build. `tsconfig.build.json` emite
 JavaScript e declarações; em seguida, `tsc-alias` converte `@/*` em imports
 relativos com extensão `.js` válidos no Node ESM.
 
-As versões diretas de TypeScript, typescript-eslint, Vite e Rollup são
-deliberadamente limitadas às linhas cuja árvore completa aceita Node 22.0. Ao
-atualizar o toolchain, confira também os `engines.node` transitivos antes de
-alterar o requisito público `>=22.0.0`.
+O build e o typecheck usam o compilador nativo TypeScript 7. O
+`typescript-eslint` ainda depende da API JavaScript do compilador, por isso o
+pacote de compatibilidade TypeScript 6 fica instalado lado a lado conforme a
+estratégia oficial de migração. Todo o toolchain e suas dependências transitivas
+são validados em Node `>=24.15.0`.
+
+O npm 12 bloqueia scripts de instalação transitivos por padrão. A allowlist
+`package.json#allowScripts` libera somente `esbuild` e `fsevents`, necessários
+para transformação e file watching no toolchain atual.
 
 `oclif.manifest.json` é gerado depois do build, faz parte do tarball e é
 removido pelo `postpack`. Ele não é versionado: ao criar, renomear ou remover

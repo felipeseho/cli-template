@@ -10,8 +10,8 @@ com React, Ink e componentes termcn.
 
 ## O que o template demonstra
 
-- Node.js 22+, TypeScript ESM e npm.
-- oclif v4 com comandos hierárquicos separados por espaço.
+- Node.js 24.15+, TypeScript 7 ESM e npm 12.
+- oclif v5 com comandos hierárquicos separados por espaço.
 - React 19, Ink 7 e componentes termcn/Ink copiados para o projeto.
 - Uma camada de casos de uso compartilhada por CLI textual e TUI.
 - Saída humana, streaming de processos e JSON estável para automação.
@@ -21,8 +21,8 @@ com React, Ink e componentes termcn.
 
 ## Requisitos
 
-- Node.js `>=22.0`
-- npm compatível com a versão do Node
+- Node.js `>=24.15`
+- npm `12.0.2`, declarado em `package.json#packageManager`
 - Git
 - Um terminal com TTY para usar o modo interativo
 

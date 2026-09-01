@@ -45,12 +45,12 @@ describe('createDoctorChecks', () => {
     }
     const probes = createDoctorChecks({
       commandVersion(command) {
-        return Promise.resolve(command === 'npm' ? '11.0.0' : undefined)
+        return Promise.resolve(command === 'npm' ? '12.0.2' : undefined)
       },
       directoryExists() {
         return Promise.resolve(true)
       },
-      nodeVersion: '22.14.0',
+      nodeVersion: '24.15.0',
       workspaceReader,
     })
 
@@ -76,7 +76,7 @@ describe('createDoctorChecks', () => {
       directoryExists() {
         return Promise.resolve(false)
       },
-      nodeVersion: '20.0.0',
+      nodeVersion: '24.14.0',
       workspaceReader: {
         read() {
           return Promise.reject(new Error('broken package'))

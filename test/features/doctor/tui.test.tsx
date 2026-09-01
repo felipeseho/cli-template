@@ -15,7 +15,7 @@ describe('doctor TUI', () => {
           id: 'node',
           label: 'Node.js',
           message: 'Unsupported runtime.',
-          remediation: 'Install Node.js 22 or newer.',
+          remediation: 'Install Node.js 24.15 or newer.',
           status: 'fail',
         },
       ],

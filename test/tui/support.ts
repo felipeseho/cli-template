@@ -25,7 +25,7 @@ export const diagnostics: DiagnosticReport = {
     {
       id: 'node',
       label: 'Node.js',
-      message: 'Node.js 22 is supported.',
+      message: 'Node.js 24.15 is supported.',
       status: 'pass',
     },
   ],

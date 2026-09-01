@@ -1,11 +1,10 @@
 {
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
-    "baseUrl": ".",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "jsx": "react-jsx",
-    "lib": ["DOM", "ES2023"],
+    "lib": ["DOM", "ES2024"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "noEmit": true,
@@ -17,7 +16,7 @@
     },
     "skipLibCheck": true,
     "strict": true,
-    "target": "ES2023",
+    "target": "ES2024",
     "rootDir": "src",
     "types": ["node", "react"],
     "verbatimModuleSyntax": true

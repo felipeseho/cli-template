@@ -63,8 +63,7 @@ Confirme os cenários abaixo antes do primeiro merge:
   fontes, testes, documentação interna ou segredos;
 - o JavaScript empacotado não contém imports `@/...`.
 
-A CI executará essas verificações em Node 22/24 no Linux e em Node 24 no macOS
-e Windows.
+A CI executará essas verificações em Node 24 no Linux, macOS e Windows.
 
 ## Segurança antes de publicar
 

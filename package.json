@@ -24,9 +24,13 @@
     "LICENSE"
   ],
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=24.15.0"
   },
-  "packageManager": "npm@10.9.4",
+  "packageManager": "npm@12.0.2",
+  "allowScripts": {
+    "esbuild": true,
+    "fsevents": true
+  },
   "scripts": {
     "build": "npm run clean && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json --resolve-full-paths --resolve-full-extension .js",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build && npm run manifest",
@@ -47,30 +51,31 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit"
   },
   "dependencies": {
-    "@oclif/core": "^4.14.0",
-    "@oclif/plugin-help": "^6.3.0",
+    "@oclif/core": "^5.0.0",
+    "@oclif/plugin-help": "^7.0.0",
     "cli-spinners": "^3.4.0",
     "execa": "^10.0.1",
     "ink": "^7.1.1",
-    "react": "^19.2.0",
-    "string-width": "^8.2.0"
+    "react": "^19.2.8",
+    "string-width": "^8.2.2"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.2",
-    "@oclif/test": "^4.2.0",
-    "@types/node": "^22.20.0",
+    "@eslint/js": "^10.0.1",
+    "@oclif/test": "^5.0.0",
+    "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
+    "@typescript/native": "npm:typescript@^7.0.2",
     "@vitest/coverage-v8": "^4.1.11",
-    "eslint": "^9.39.2",
+    "eslint": "^10.9.1",
     "ink-testing-library": "^4.0.0",
-    "oclif": "^4.24.0",
+    "oclif": "^5.0.0",
     "prettier": "^3.9.6",
-    "rollup": "4.60.0",
+    "rollup": "^4.63.1",
     "tsc-alias": "^1.9.3",
     "tsx": "^4.23.13",
-    "typescript": "~5.9.3",
-    "typescript-eslint": "8.50.0",
-    "vite": "6.4.3",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "typescript-eslint": "^8.69.0",
+    "vite": "^8.2.2",
     "vitest": "^4.1.11"
   },
   "oclif": {

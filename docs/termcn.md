@@ -110,7 +110,7 @@ largura e desabilitar movimento/Unicode.
 
 ## Particularidades do Ink 7
 
-- Requer Node moderno; este template fixa Node `>=22.0` e React 19.
+- Requer Node moderno; este template fixa Node `>=24.15` e React 19.
 - A aplicação é montada uma vez com `render(..., {alternateScreen: true})`.
 - O chamador aguarda `waitUntilExit()` antes de devolver o controle ao oclif.
 - Sinais e desmontagem devem sempre restaurar raw mode, cursor e screen buffer.
