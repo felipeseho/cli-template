@@ -1,6 +1,6 @@
 import {Box, Text} from 'ink'
 
-import type {Workspace} from '@/features/workspace/types.js'
+import type {Workspace} from '@/features/workspace/index.js'
 import {useTheme} from '@/tui/hooks/use-theme.js'
 import {useUnicode} from '@/tui/hooks/use-unicode.js'
 

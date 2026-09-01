@@ -1,11 +1,12 @@
 import {Box, Text, useApp, useInput, useStdout} from 'ink'
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 
-import type {DiagnosticContext, DiagnosticReport} from '@/features/doctor/types.js'
-import type {RunTaskInput} from '@/features/tasks/run-task.js'
-import type {Task, TaskResult} from '@/features/tasks/types.js'
-import type {Workspace} from '@/features/workspace/types.js'
+import type {DiagnosticContext, DiagnosticReport} from '@/features/doctor/index.js'
+import type {TaskResult} from '@/features/tasks/index.js'
+import type {TaskActivity} from '@/features/tasks/tui/use-task-run.js'
+import {useWorkspace} from '@/features/workspace/tui/use-workspace.js'
 import {ThemeProvider} from '@/providers/theme-provider.js'
+import type {ApplicationServices} from '@/runtime/services.js'
 import {Header} from '@/tui/components/app/header.js'
 import {AppShell} from '@/tui/components/ui/app-shell.js'
 import {CommandPalette, type Command} from '@/tui/components/ui/command-palette.js'
@@ -14,17 +15,10 @@ import {useUnicode} from '@/tui/hooks/use-unicode.js'
 import {cliTheme} from '@/tui/theme/index.js'
 
 import {isControlC, isHelpKey, isPaletteKey} from './keymap.js'
-import {normalizeRoute, Router, type InitialRoute, type ScreenRoute} from './router.js'
+import {Router} from './router.js'
+import {normalizeRoute, type InitialRoute, type ScreenRoute} from './routes.js'
 import {HelpScreen} from './screens/help.js'
 import type {RecentRun} from './screens/home.js'
-import type {TaskActivity} from './screens/task-run.js'
-
-export interface TuiServices {
-  readonly listTasks: (workspace: Workspace) => Promise<readonly Task[]>
-  readonly readWorkspace: (directory: string) => Promise<Workspace>
-  readonly runDiagnostics: (context: DiagnosticContext) => Promise<DiagnosticReport>
-  readonly runTask: (input: RunTaskInput) => Promise<TaskResult>
-}
 
 export interface AppProps {
   readonly cwd?: string
@@ -34,7 +28,7 @@ export interface AppProps {
   readonly onDiagnosticsCompleted?: (report: DiagnosticReport) => void
   readonly onExit?: (code: number) => void
   readonly onTaskCompleted?: (result: TaskResult) => void
-  readonly services: TuiServices
+  readonly services: ApplicationServices
   readonly stdinIsTTY?: boolean
   readonly stdoutIsTTY?: boolean
   readonly version?: string
@@ -46,7 +40,7 @@ interface AppContentProps extends Required<Pick<AppProps, 'cwd' | 'name' | 'vers
   readonly onDiagnosticsCompleted?: (report: DiagnosticReport) => void
   readonly onExit?: (code: number) => void
   readonly onTaskCompleted?: (result: TaskResult) => void
-  readonly services: TuiServices
+  readonly services: ApplicationServices
   readonly stdinIsTTY: boolean
   readonly stdoutIsTTY: boolean
 }
@@ -76,10 +70,23 @@ function AppContent({
   const [isTaskRunning, setIsTaskRunning] = useState(false)
   const [helpOverlayOpen, setHelpOverlayOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
-  const [workspace, setWorkspace] = useState<Workspace>()
-  const [workspaceError, setWorkspaceError] = useState<string>()
-  const [workspaceLoading, setWorkspaceLoading] = useState(true)
-  const [tasks, setTasks] = useState<readonly Task[]>([])
+  const listTasks = useCallback<ApplicationServices['listTasks']>(
+    (workspace) => services.listTasks(workspace),
+    [services],
+  )
+  const readWorkspace = useCallback<ApplicationServices['readWorkspace']>(
+    (directory) => services.readWorkspace(directory),
+    [services],
+  )
+  const {
+    error: workspaceError,
+    loading: workspaceLoading,
+    workspace,
+  } = useWorkspace({
+    cwd,
+    readWorkspace,
+  })
+  const tasks = useMemo(() => (workspace ? listTasks(workspace) : []), [listTasks, workspace])
   const [recentRuns, setRecentRuns] = useState<readonly RecentRun[]>([])
 
   useEffect(() => {
@@ -92,38 +99,6 @@ function AppContent({
       stdout.off('resize', resize)
     }
   }, [stdout])
-
-  useEffect(() => {
-    let active = true
-    setWorkspaceLoading(true)
-    setWorkspaceError(undefined)
-
-    void services
-      .readWorkspace(cwd)
-      .then(async (nextWorkspace) => {
-        const nextTasks = await services.listTasks(nextWorkspace)
-        if (active) {
-          setWorkspace(nextWorkspace)
-          setTasks(nextTasks)
-        }
-      })
-      .catch((caught: unknown) => {
-        if (active) {
-          setWorkspace(undefined)
-          setTasks([])
-          setWorkspaceError(caught instanceof Error ? caught.message : String(caught))
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setWorkspaceLoading(false)
-        }
-      })
-
-    return () => {
-      active = false
-    }
-  }, [cwd, services])
 
   const requestExit = useCallback(
     (code: number) => {

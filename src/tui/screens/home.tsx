@@ -1,7 +1,7 @@
 import {Box, Text} from 'ink'
 
-import type {Task, TaskStatus} from '@/features/tasks/types.js'
-import type {Workspace} from '@/features/workspace/types.js'
+import type {Task, TaskStatus} from '@/features/tasks/index.js'
+import type {Workspace} from '@/features/workspace/index.js'
 import {EmptyState} from '@/tui/components/app/empty-state.js'
 import {Panel} from '@/tui/components/app/panel.js'
 import {ScreenTitle} from '@/tui/components/app/screen-title.js'
@@ -11,7 +11,7 @@ import {Table, type Column} from '@/tui/components/ui/table.js'
 import {useTheme} from '@/tui/hooks/use-theme.js'
 import {useUnicode} from '@/tui/hooks/use-unicode.js'
 
-import type {ScreenRoute} from '../router.js'
+import type {ScreenRoute} from '../routes.js'
 
 export interface RecentRun {
   readonly durationMs: number

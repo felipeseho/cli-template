@@ -1,4 +1,4 @@
-export {runDiagnostics, type RunDiagnosticsDependencies} from './run-diagnostics.js'
+export {runDiagnostics, type RunDiagnosticsDependencies} from './core/run-diagnostics.js'
 export type {
   DiagnosticCheck,
   DiagnosticContext,
@@ -6,4 +6,4 @@ export type {
   DiagnosticReport,
   DiagnosticStatus,
   DiagnosticSummary,
-} from './types.js'
+} from './core/types.js'

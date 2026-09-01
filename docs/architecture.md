@@ -32,6 +32,7 @@ bin/
 
 src/
   index.ts
+  cli/
   commands/
     ui.ts
     doctor.ts
@@ -46,27 +47,36 @@ src/
   providers/
   features/
     workspace/
+      core/
+      adapters/
+      cli/
+      tui/
     tasks/
+      core/
+      adapters/
+      cli/
+      tui/
     doctor/
-  infrastructure/
-    workspace/
-    process/
-    system/
-  presenters/
-    human/
-    json/
+      core/
+      adapters/
+      cli/
+      tui/
   tui/
     app.tsx
     router.tsx
+    routes.ts
     keymap.ts
     screens/
+      home.tsx
+      help.tsx
     components/
       ui/
       app/
     hooks/
 
 test/
-  unit/
+  features/
+  cli/
   commands/
   tui/
   fixtures/
@@ -97,43 +107,50 @@ projeto é um espaço.
 Fronteira de inicialização: compõe dependências, detecta TTY, instala e remove
 handlers de sinais e monta a raiz Ink. É também onde o terminal entra e sai do
 alternate screen. `waitUntilExit()` deve ser aguardado e todo cleanup fica em
-um bloco `finally`.
+um bloco `finally`. `services.ts` define a única fachada consumida pelos
+comandos e pela TUI; somente o container conhece implementações concretas.
+
+### `src/cli/`
+
+Infraestrutura compartilhada da interface textual: `BaseCommand`, serialização
+JSON sem ANSI, sanitização de texto, tabelas e o contrato de mapeamento de erros.
+Presenters e mapeadores específicos permanecem na feature que os utiliza.
 
 ### `src/features/`
 
-Casos de uso e contratos independentes de framework:
+Módulos verticais organizados em quatro fronteiras internas:
+
+- `core`: tipos, portas e casos de uso independentes de framework;
+- `adapters`: implementações concretas das portas da feature;
+- `cli`: presenters, DTOs e tradução de erros específicos;
+- `tui`: telas e controladores de estado específicos.
+
+As features atuais são:
 
 - `workspace`: encontra e lê o `package.json` do diretório atual.
 - `tasks`: lista scripts e executa uma tarefa, emitindo eventos tipados.
 - `doctor`: agrega verificações do ambiente em diagnósticos tipados.
 
 Os contratos principais são `Workspace`, `Task`, `TaskEvent`, `TaskResult` e
-`DiagnosticCheck`. Tipos e casos de uso desta camada não importam oclif, Ink,
-React nem Execa.
+`DiagnosticCheck`. Arquivos de `core` não importam oclif, Ink, React, Execa nem
+uma fronteira externa da própria feature. `workspace` é a dependência
+fundamental compartilhada por `tasks` e `doctor`; estas duas features não se
+conhecem.
 
-### `src/infrastructure/`
-
-Implementações das portas de `features`: leitura do sistema de arquivos,
-subprocessos com Execa e inspeção de Node/npm/Git/TTY. O executor chama `npm`
-com programa e argumentos separados, `shell: false`, diretório de trabalho
-explícito e `AbortSignal`.
-
-### `src/presenters/`
-
-Transforma resultados em contratos de saída. Presenters humanos podem produzir
-tabelas e mensagens; presenters JSON retornam somente dados serializáveis. A
-variante JSON nunca inclui ANSI, spinner ou texto incidental.
+O executor em `tasks/adapters` chama `npm` com programa e argumentos separados,
+`shell: false`, diretório de trabalho explícito e `AbortSignal`.
 
 ### `src/tui/`
 
-Contém uma única aplicação Ink:
+Contém o shell de uma única aplicação Ink:
 
-- `screens`: telas ligadas às rotas `home`, `task-list`, `task-run`, `doctor` e
-  `help`.
+- `screens`: telas globais `home` e `help`; telas de tarefas e doctor ficam nas
+  respectivas features.
 - `components/ui`: fontes copiadas do registry termcn e versionadas no projeto.
 - `components/app`: composições que pertencem ao domínio deste template.
-- `hooks`: coordenação de estado e casos de uso; não implementa infraestrutura.
-- `router.tsx` e `keymap.ts`: navegação e atalhos globais.
+- `hooks`: primitives vendorizadas pelo termcn.
+- `routes.ts`, `router.tsx` e `keymap.ts`: contratos de navegação, composição de
+  telas e atalhos globais.
 
 ### `src/components/`, `src/lib/` e `src/providers/`
 
@@ -146,7 +163,8 @@ profundos.
 
 ### `test/`
 
-- `unit`: casos de uso com portas fake.
+- `features`: core, adapters, CLI e TUI organizados pela mesma feature do fonte.
+- `cli`: helpers compartilhados da interface textual.
 - `commands`: comportamento oclif, streams, JSON e códigos de saída.
 - `tui`: frames e entrada de teclado com `ink-testing-library`.
 - `fixtures`: workspaces determinísticos.
@@ -181,16 +199,17 @@ localmente; `prepack` repete o processo antes de publicar.
 ### Listagem de tarefas
 
 1. O adaptador informa o diretório atual ao leitor de workspace.
-2. A infraestrutura lê `package.json#scripts` e cria tarefas tipadas.
-3. O caso de uso ordena e devolve as tarefas.
-4. O comando escolhe presenter humano/JSON; a tela atualiza a tabela.
+2. O adapter de workspace lê `package.json#scripts`.
+3. O caso de uso de tasks transforma e ordena as tarefas.
+4. O comando usa o presenter humano ou retorna o DTO JSON; a tela atualiza a
+   tabela.
 
 Sem `package.json`, a saída textual informa como corrigir o workspace, a saída
 JSON mantém seu contrato e a TUI mostra um empty state em vez de quebrar.
 
 ### Execução de tarefa
 
-1. O caso de uso valida o nome contra o catálogo; comandos arbitrários são
+1. O caso de uso valida o nome contra a lista do workspace; comandos arbitrários são
    rejeitados antes de criar um processo.
 2. O runner inicia `npm run -- <nome>` sem shell; `--` impede que nomes de
    scripts iniciados por hífen sejam interpretados como opções do npm, e então
@@ -204,9 +223,12 @@ e a desmontagem restaura raw mode, cursor e alternate screen.
 
 ## Limites de dependência
 
-- `features` não importa outras camadas externas.
-- `infrastructure` implementa portas declaradas por `features`.
-- `commands`, `presenters` e `tui` podem importar `features` e o container.
+- `core` depende apenas de outros contratos de core explicitamente permitidos.
+- `adapters`, `cli` e `tui` de uma feature dependem para dentro e não importam
+  implementações de outras features.
+- imports internos usam caminhos relativos; consumidores externos usam o
+  `index.ts` da feature para acessar seu core.
+- `commands`, `runtime` e o shell da TUI compõem as features.
 - `commands` não importa telas individuais; pede ao runtime uma rota inicial.
 - `tui` não executa classes oclif.
 - Apenas o composition root conhece implementações concretas de todas as

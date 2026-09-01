@@ -1,5 +1,5 @@
-import {presentDiagnosticsHuman} from '@/presenters/human/index.js'
-import {BaseCommand, interactiveFlag} from '@/runtime/base-command.js'
+import {BaseCommand, interactiveFlag} from '@/cli/base-command.js'
+import {presentDiagnosticsHuman} from '@/features/doctor/cli/presenter.js'
 import {createApplicationServices} from '@/runtime/container.js'
 import {renderTui} from '@/runtime/render-tui.js'
 

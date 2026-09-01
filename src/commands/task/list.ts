@@ -1,5 +1,7 @@
-import {presentTaskListHuman} from '@/presenters/human/index.js'
-import {BaseCommand, interactiveFlag} from '@/runtime/base-command.js'
+import {BaseCommand, interactiveFlag} from '@/cli/base-command.js'
+import {mapWorkspaceCliError} from '@/features/workspace/cli/errors.js'
+import {toTaskListOutput} from '@/features/tasks/cli/output.js'
+import {presentTaskListHuman} from '@/features/tasks/cli/presenter.js'
 import {createApplicationServices} from '@/runtime/container.js'
 import {renderTui} from '@/runtime/render-tui.js'
 
@@ -32,19 +34,12 @@ export default class TaskList extends BaseCommand {
       }
 
       const workspace = await services.readWorkspace(process.cwd())
-      const tasks = await services.listTasks(workspace)
+      const tasks = services.listTasks(workspace)
       if (!this.jsonEnabled()) this.log(presentTaskListHuman(workspace, tasks))
 
-      return {
-        tasks,
-        workspace: {
-          name: workspace.name,
-          packageJsonPath: workspace.packageJsonPath,
-          path: workspace.path,
-        },
-      }
+      return toTaskListOutput(workspace, tasks)
     } catch (error: unknown) {
-      this.fail(error)
+      this.fail(error, [mapWorkspaceCliError])
     }
   }
 }

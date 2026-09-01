@@ -2,7 +2,7 @@ import {PassThrough} from 'node:stream'
 
 import {describe, expect, it, vi} from 'vitest'
 
-import type {TuiServices} from '@/tui/app.js'
+import type {ApplicationServices} from '@/runtime/services.js'
 import {renderTui} from '@/runtime/render-tui.js'
 
 function interactiveStreams() {
@@ -38,8 +38,8 @@ describe('renderTui', () => {
     streams.stdout.on('data', (chunk) => {
       output += String(chunk)
     })
-    const services: TuiServices = {
-      listTasks: () => Promise.resolve([]),
+    const services: ApplicationServices = {
+      listTasks: () => [],
       readWorkspace: () => Promise.reject(new Error('No package.json')),
       runDiagnostics: () =>
         Promise.resolve({

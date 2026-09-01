@@ -6,7 +6,7 @@ textual, omita a etapa da tela, mas preserve o caso de uso separado.
 
 ## 1. Modele o caso de uso
 
-Crie uma pasta em `src/features/<feature>/` com:
+Crie uma pasta em `src/features/<feature>/core/` com:
 
 - tipos de entrada, resultado e eventos;
 - portas para efeitos externos;
@@ -28,13 +28,23 @@ export type ExampleEvent =
   | {type: 'cancelled'}
 ```
 
-Implemente a porta concreta em `src/infrastructure/` e registre-a no container.
+Exponha somente esses contratos em `src/features/<feature>/index.ts`. Imports
+internos à feature são relativos; outros módulos consomem esse entrypoint.
+
+Implemente cada porta concreta em `src/features/<feature>/adapters/` e
+registre-a no container. Nenhum adapter instancia outro adapter: somente o
+composition root conhece implementações concretas.
 
 ## 2. Crie os presenters
 
-Adicione uma transformação humana e uma transformação JSON em
-`src/presenters/`. O contrato JSON precisa ser composto apenas por dados e deve
-permanecer sem ANSI, logs, mensagens de progresso ou spinner.
+Adicione a transformação humana e os DTOs necessários em
+`src/features/<feature>/cli/`. Use `src/cli/` para tabela, sanitização e
+serialização compartilhadas. O contrato JSON precisa ser composto apenas por
+dados e deve permanecer sem ANSI, logs, mensagens de progresso ou spinner.
+
+Não crie wrappers JSON de identidade. Quando a forma pública diferir do
+resultado do caso de uso, crie um mapper tipado e faça o comando retornar esse
+DTO.
 
 Decida antes de implementar:
 
@@ -71,8 +81,8 @@ apenas escolher outro adaptador para o mesmo caso de uso. Se o comando aceitar
 
 ## 4. Adicione a rota e a tela
 
-Inclua uma rota em `ScreenRoute` e conecte-a em `src/tui/router.tsx`. A tela em
-`src/tui/screens/` deve:
+Inclua uma rota em `ScreenRoute` e conecte-a em `src/tui/router.tsx`. A tela e
+seus controladores em `src/features/<feature>/tui/` devem:
 
 - receber serviços e estado por props/contexto, sem importá-los de módulos
   globais mutáveis;
@@ -91,12 +101,13 @@ oclif. Eventos do caso de uso devem virar estado visual.
 
 ## 5. Teste os três níveis
 
-### Caso de uso
+### Feature
 
 - sucesso com portas fake;
 - validação e falha esperada;
 - sequência dos eventos;
 - cancelamento e liberação de recursos.
+- presenters, DTOs e adapters específicos.
 
 ### Comando
 
@@ -107,13 +118,16 @@ oclif. Eventos do caso de uso devem virar estado visual.
 - `--interactive` sem TTY retorna código `2`;
 - código de saída do processo é preservado.
 
-### TUI
+### TUI da feature
 
 - rota e frame inicial;
 - navegação e atalhos;
 - loading e frame final;
 - confirmação e cancelamento;
 - terminal estreito e largo quando o layout mudar.
+
+Organize esses testes em `test/features/<feature>/`. Testes globais de comando,
+shell, rotas e empacotamento permanecem em suas pastas de integração.
 
 Use largura fixa, `NO_MOTION=1` e `NO_UNICODE=1` nos testes visuais. Evite
 snapshots de tempo decorrido ou animação; prefira as informações semânticas do

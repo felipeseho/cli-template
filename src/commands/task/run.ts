@@ -1,8 +1,10 @@
 import {Args, Flags} from '@oclif/core'
 
+import {BaseCommand, interactiveFlag} from '@/cli/base-command.js'
+import {mapTaskCliError} from '@/features/tasks/cli/errors.js'
+import {presentTaskResultHuman} from '@/features/tasks/cli/presenter.js'
 import {resolveTask, type TaskEvent} from '@/features/tasks/index.js'
-import {presentTaskResultHuman} from '@/presenters/human/index.js'
-import {BaseCommand, interactiveFlag} from '@/runtime/base-command.js'
+import {mapWorkspaceCliError} from '@/features/workspace/cli/errors.js'
 import {createApplicationServices} from '@/runtime/container.js'
 import {renderTui} from '@/runtime/render-tui.js'
 import {createSignalController} from '@/runtime/signals.js'
@@ -44,7 +46,7 @@ export default class TaskRun extends BaseCommand {
     try {
       if (flags.interactive) {
         const workspace = await services.readWorkspace(process.cwd())
-        const tasks = await services.listTasks(workspace)
+        const tasks = services.listTasks(workspace)
         resolveTask(tasks, args.script)
 
         let taskExitCode = 0
@@ -83,7 +85,7 @@ export default class TaskRun extends BaseCommand {
         signals.dispose()
       }
     } catch (error: unknown) {
-      this.fail(error)
+      this.fail(error, [mapTaskCliError, mapWorkspaceCliError])
     }
   }
 }
