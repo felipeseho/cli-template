@@ -1,26 +1,23 @@
-import {BaseCommand, interactiveFlag} from '@/cli/base-command.js'
+import {DashboardCommand} from '@/cli/base-command.js'
 import {presentDiagnosticsHuman} from '@/features/doctor/cli/presenter.js'
 import {createApplicationServices} from '@/runtime/container.js'
 import {renderTui} from '@/runtime/render-tui.js'
 
-export default class Doctor extends BaseCommand {
+export default class Doctor extends DashboardCommand {
   static override description = 'Check the local runtime, tools, terminal, and workspace.'
   static override examples = [
     '<%= config.bin %> doctor',
-    '<%= config.bin %> doctor --interactive',
+    '<%= config.bin %> doctor --no-interactive',
     '<%= config.bin %> doctor --json',
   ]
-  static override flags = {
-    interactive: interactiveFlag,
-  }
   static override summary = 'Diagnose the current CLI environment'
 
   async run() {
     const {flags} = await this.parse(Doctor)
-    this.assertOutputMode(flags.interactive)
+    const outputMode = this.outputMode(flags['no-interactive'])
     const services = createApplicationServices()
 
-    if (flags.interactive) {
+    if (outputMode === 'tui') {
       let diagnosticExitCode = 0
       const exitCode = await renderTui({
         cwd: process.cwd(),
@@ -28,6 +25,9 @@ export default class Doctor extends BaseCommand {
         name: this.config.bin,
         onDiagnosticsCompleted: (report) => {
           diagnosticExitCode = report.ok ? 0 : 1
+        },
+        onDiagnosticsError: () => {
+          diagnosticExitCode = 1
         },
         services,
         version: this.config.version,
@@ -43,7 +43,7 @@ export default class Doctor extends BaseCommand {
       stdoutIsTTY: process.stdout.isTTY === true,
     })
 
-    if (!this.jsonEnabled()) this.log(presentDiagnosticsHuman(report))
+    if (outputMode === 'text') this.log(presentDiagnosticsHuman(report))
     if (!report.ok) process.exitCode = 1
     return report
   }

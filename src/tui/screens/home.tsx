@@ -158,7 +158,7 @@ export function HomeScreen({
     },
     {
       detail: health.detail,
-      label: 'Saúde',
+      label: 'Ambiente',
       tone: health.tone,
       value: health.value,
     },

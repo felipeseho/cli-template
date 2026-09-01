@@ -1,5 +1,5 @@
 #!/usr/bin/env node
 
-import {execute} from '@oclif/core'
+import {runCli} from '../dist/runtime/run-cli.js'
 
-await execute({dir: import.meta.url})
+await runCli({dir: import.meta.url})

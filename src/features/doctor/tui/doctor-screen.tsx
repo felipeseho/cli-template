@@ -18,6 +18,7 @@ export interface DoctorScreenProps {
   readonly context: DiagnosticContext
   readonly inputEnabled: boolean
   readonly onCompleted?: (report: DiagnosticReport) => void
+  readonly onError?: (error: unknown) => void
   readonly runDiagnostics: ApplicationServices['runDiagnostics']
   readonly viewportRows: number
   readonly wide: boolean
@@ -59,6 +60,7 @@ export function DoctorScreen({
   context,
   inputEnabled,
   onCompleted,
+  onError,
   runDiagnostics,
   viewportRows,
   wide,
@@ -70,6 +72,7 @@ export function DoctorScreen({
   const {error, execute, loading, report} = useDiagnostics({
     context,
     onCompleted,
+    onError,
     runDiagnostics,
   })
 

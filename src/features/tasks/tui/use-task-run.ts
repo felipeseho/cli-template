@@ -14,7 +14,9 @@ export interface UseTaskRunOptions {
   readonly initialTask?: string
   readonly onActivityChange: (activity: TaskActivity) => void
   readonly onCompleted: (result: TaskResult) => void
+  readonly onError?: (error: unknown) => void
   readonly runTask: ApplicationServices['runTask']
+  readonly taskOutputLimit?: number
   readonly workspace?: Workspace
 }
 
@@ -46,7 +48,9 @@ export function useTaskRun({
   initialTask,
   onActivityChange,
   onCompleted,
+  onError,
   runTask,
+  taskOutputLimit,
   workspace,
 }: UseTaskRunOptions): UseTaskRunResult {
   const mounted = useRef(true)
@@ -114,7 +118,7 @@ export function useTaskRun({
 
           setLogs((current) => [...current, ...outputEntries(event)].slice(-300))
         },
-        outputLimit: 65_536,
+        ...(taskOutputLimit === undefined ? {} : {outputLimit: taskOutputLimit}),
         signal: nextController.signal,
         taskName: selectedTask,
         workspace,
@@ -137,6 +141,7 @@ export function useTaskRun({
             : String(caught),
       )
       setPhase('failed')
+      onError?.(caught)
     } finally {
       if (mounted.current) {
         controller.current = undefined
@@ -144,7 +149,16 @@ export function useTaskRun({
         onActivityChange({running: false})
       }
     }
-  }, [onActivityChange, onCompleted, phase, runTask, selectedTask, workspace])
+  }, [
+    onActivityChange,
+    onCompleted,
+    onError,
+    phase,
+    runTask,
+    selectedTask,
+    taskOutputLimit,
+    workspace,
+  ])
 
   const retry = useCallback(() => {
     setPhase('confirm')

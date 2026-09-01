@@ -6,6 +6,7 @@ import type {ApplicationServices} from '@/runtime/services.js'
 export interface UseDiagnosticsOptions {
   readonly context: DiagnosticContext
   readonly onCompleted?: (report: DiagnosticReport) => void
+  readonly onError?: (error: unknown) => void
   readonly runDiagnostics: ApplicationServices['runDiagnostics']
 }
 
@@ -19,6 +20,7 @@ export interface UseDiagnosticsResult {
 export function useDiagnostics({
   context,
   onCompleted,
+  onError,
   runDiagnostics,
 }: UseDiagnosticsOptions): UseDiagnosticsResult {
   const [report, setReport] = useState<DiagnosticReport>()
@@ -52,11 +54,12 @@ export function useDiagnostics({
       if (!mounted.current) return
 
       setError(caught instanceof Error ? caught.message : String(caught))
+      onError?.(caught)
     } finally {
       running.current = false
       if (mounted.current) setLoading(false)
     }
-  }, [context, onCompleted, runDiagnostics])
+  }, [context, onCompleted, onError, runDiagnostics])
 
   useEffect(() => {
     void execute()

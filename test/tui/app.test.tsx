@@ -48,7 +48,7 @@ describe('interactive application', () => {
     const lines = frame.split('\n')
     expect(lines).toHaveLength(40)
     expect(Math.max(...lines.map((line) => stringWidth(line)))).toBeLessThanOrEqual(120)
-    for (const metric of ['Workspace', 'Scripts', 'Saúde', 'Sessão']) {
+    for (const metric of ['Workspace', 'Scripts', 'Ambiente', 'Sessão']) {
       expect(frame).toContain(metric)
     }
     expect(frame).toContain('não verificado')
@@ -79,7 +79,7 @@ describe('interactive application', () => {
     await vi.waitFor(() => {
       expect(instance.lastFrame()).toContain('Workspace: carregando')
       expect(instance.lastFrame()).toContain('Scripts: -')
-      expect(instance.lastFrame()).toContain('Saúde: não verificado')
+      expect(instance.lastFrame()).toContain('Ambiente: não verificado')
     })
 
     resolveWorkspace({...workspace, scripts: {}})
@@ -94,11 +94,14 @@ describe('interactive application', () => {
   })
 
   it('keeps Doctor available when Home cannot load a workspace', async () => {
+    const failure = new Error('package.json ausente')
+    const onWorkspaceError = vi.fn()
     const instance = render(
       <App
         cwd="/fixture/missing"
+        onWorkspaceError={onWorkspaceError}
         services={createServices({
-          readWorkspace: () => Promise.reject(new Error('package.json ausente')),
+          readWorkspace: () => Promise.reject(failure),
         })}
         stdinIsTTY
         stdoutIsTTY
@@ -110,6 +113,8 @@ describe('interactive application', () => {
       expect(instance.lastFrame()).toContain('Workspace: não detectado')
       expect(instance.lastFrame()).toContain('Verificar ambiente')
       expect(instance.lastFrame()).not.toContain('Explorar tarefas')
+      expect(onWorkspaceError).toHaveBeenCalledOnce()
+      expect(onWorkspaceError).toHaveBeenCalledWith(failure)
     })
 
     instance.unmount()

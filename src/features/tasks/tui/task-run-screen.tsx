@@ -27,7 +27,9 @@ export interface TaskRunScreenProps {
   readonly onActivityChange: (activity: TaskActivity) => void
   readonly onCompleted: (result: TaskResult) => void
   readonly onDialogOpenChange?: (isOpen: boolean) => void
+  readonly onError?: (error: unknown) => void
   readonly runTask: ApplicationServices['runTask']
+  readonly taskOutputLimit?: number
   readonly tasks: readonly Task[]
   readonly viewportRows: number
   readonly workspace?: Workspace
@@ -130,7 +132,9 @@ export function TaskRunScreen({
   onActivityChange,
   onCompleted,
   onDialogOpenChange,
+  onError,
   runTask,
+  taskOutputLimit,
   tasks,
   viewportRows,
   workspace,
@@ -154,7 +158,15 @@ export function TaskRunScreen({
     runError,
     selectedTask,
     selectTask,
-  } = useTaskRun({initialTask, onActivityChange, onCompleted, runTask, workspace})
+  } = useTaskRun({
+    initialTask,
+    onActivityChange,
+    onCompleted,
+    onError,
+    runTask,
+    taskOutputLimit,
+    workspace,
+  })
   const selected = tasks.find((task) => task.name === selectedTask)
   const dialogOpen = phase === 'confirm' && selected !== undefined
   const dialogOpenRef = useRef(dialogOpen)

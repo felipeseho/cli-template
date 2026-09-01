@@ -22,13 +22,16 @@ export interface RouterProps {
   readonly layout: DashboardLayout
   readonly navigate: (route: ScreenRoute) => void
   readonly onDiagnosticsCompleted?: (report: DiagnosticReport) => void
+  readonly onDiagnosticsError?: (error: unknown) => void
   readonly onDialogOpenChange: (isOpen: boolean) => void
   readonly onTaskActivityChange: (activity: TaskActivity) => void
   readonly onTaskCompleted: (result: TaskResult) => void
+  readonly onTaskError?: (error: unknown) => void
   readonly recentRuns: readonly RecentRun[]
   readonly route: ScreenRoute
   readonly services: ApplicationServices
   readonly tasks: readonly Task[]
+  readonly taskOutputLimit?: number
   readonly viewportRows: number
   readonly wide: boolean
   readonly workspace?: Workspace
@@ -43,13 +46,16 @@ export function Router({
   layout,
   navigate,
   onDiagnosticsCompleted,
+  onDiagnosticsError,
   onDialogOpenChange,
   onTaskActivityChange,
   onTaskCompleted,
+  onTaskError,
   recentRuns,
   route,
   services,
   tasks,
+  taskOutputLimit,
   viewportRows,
   wide,
   workspace,
@@ -72,6 +78,7 @@ export function Router({
           context={diagnosticContext}
           inputEnabled={inputEnabled}
           onCompleted={onDiagnosticsCompleted}
+          onError={onDiagnosticsError}
           runDiagnostics={runDiagnostics}
           viewportRows={viewportRows}
           wide={wide}
@@ -122,7 +129,9 @@ export function Router({
           onActivityChange={onTaskActivityChange}
           onCompleted={onTaskCompleted}
           onDialogOpenChange={onDialogOpenChange}
+          onError={onTaskError}
           runTask={runTask}
+          taskOutputLimit={taskOutputLimit}
           tasks={tasks}
           viewportRows={viewportRows}
           workspace={workspace}

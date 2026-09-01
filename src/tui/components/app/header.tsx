@@ -1,6 +1,7 @@
 import {Box, Text} from 'ink'
 
 import type {Workspace} from '@/features/workspace/index.js'
+import {resolveBrandSymbol} from '@/terminal/brand.js'
 import {useTheme} from '@/tui/hooks/use-theme.js'
 import {useUnicode} from '@/tui/hooks/use-unicode.js'
 import type {DashboardLayout} from '@/tui/layout.js'
@@ -41,7 +42,7 @@ export function Header({cwd, description, layout, name, status, version, workspa
       <Box height={1} justifyContent="space-between" overflow="hidden">
         <Box flexGrow={1} flexShrink={1} minWidth={0} overflow="hidden">
           <Text bold color={theme.colors.primary} wrap="truncate-end">
-            {unicode ? '◆' : '<>'} {name.toLocaleUpperCase()}{' '}
+            {resolveBrandSymbol('mark', unicode)} {name.toLocaleUpperCase()}{' '}
             <Text color={theme.colors.mutedForeground}>v{version}</Text>
             {!compact ? (
               <Text color={theme.colors.mutedForeground}>

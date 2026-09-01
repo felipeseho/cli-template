@@ -106,6 +106,12 @@ fails if an unresolved `@/...` import reaches the tarball.
 The explicit `ThemeProvider` lives at the TUI root. Screens should use semantic tokens instead of
 repeating raw colors, allowing a product-wide theme change without rewriting individual components.
 
+Product identity that also applies outside Ink lives in `src/terminal/brand.ts`. It owns purple
+`#8B5CF6`, cyan `#22D3EE`, muted `#94A3B8`, and the Unicode/ASCII pairs for the mark (`◆`/`<>`)
+and breadcrumb (`›`/`>`). Both the TUI theme and the oclif help renderer consume these neutral
+tokens. The help renderer remains static terminal text: it does not import termcn components, mount
+Ink, or enter the alternate screen.
+
 The template's building blocks include:
 
 - `AppShell` for header, content, and shortcut regions;
@@ -139,7 +145,14 @@ Presentation must respect:
 - `NO_UNICODE`: use ASCII-safe symbols;
 - `NO_MOTION`: disable animation and time-dependent frames;
 - `CI`: prefer deterministic, conservative output;
-- missing TTY capability: never mount the interactive application.
+- `TERM=dumb`: keep static help ANSI-free and ASCII-safe;
+- missing TTY capability: never mount the dashboard; commands use text and the root uses help.
+
+For static help, any one of `NO_COLOR`, `NO_UNICODE`, or `TERM=dumb` selects the combined
+ANSI-free, ASCII-safe fallback.
+
+`--no-interactive` makes the same plain-text selection even with a TTY. `--json` takes priority over
+TTY detection and `--no-interactive`.
 
 Use `process.stdout.columns` or an Ink terminal-size hook for responsive layouts. Manually verify at
 least 80×24 and 120×40. Automated visual tests should fix width and disable motion and Unicode.
@@ -147,25 +160,30 @@ least 80×24 and 120×40. Automated visual tests should fix width and disable mo
 ## Ink lifecycle
 
 Ink's `render()` returns an instance that owns the application lifecycle. This template mounts one
-root with `alternateScreen: true` and waits for `waitUntilExit()` before returning control to oclif.
+root with `alternateScreen: true` and waits for `waitUntilExit()` before returning control to the
+CLI bootstrap or invoking command.
 
 ```mermaid
 sequenceDiagram
-  participant Command as oclif command
+  participant Caller as CLI bootstrap or command
   participant Runtime as TUI runtime
   participant Ink as Ink instance
   participant Screen as Active screen
 
-  Command->>Runtime: renderTui(options)
+  Caller->>Runtime: renderTui(initial route + options)
   Runtime->>Ink: render(App, alternateScreen: true)
   Ink->>Screen: mount
   Screen->>Screen: useInput handles keys
-  Command->>Ink: await waitUntilExit()
+  Caller->>Ink: await waitUntilExit()
   Screen-->>Ink: exit or cancellation completes
   Ink-->>Runtime: application unmounted
   Runtime->>Runtime: remove signals and restore terminal
-  Runtime-->>Command: exit code
+  Runtime-->>Caller: exit code
 ```
+
+An empty invocation starts at Home. `task list`, `task run`, and `doctor` use the same root and set
+their feature route as the initial destination. This keeps terminal lifecycle and global overlays
+centralized while allowing oclif commands to select the relevant screen.
 
 `useInput` coordinates keyboard handling and automatically works with raw stdin input. A running
 task interprets `Ctrl+C` as cancellation; an idle application interprets it as exit. `Esc` provides
@@ -191,6 +209,7 @@ Also confirm that:
 - no OpenTUI-only component entered the Ink application;
 - local imports use `.js` specifiers;
 - the packaged build contains no unresolved aliases;
+- dashboard and static help still consume the shared brand tokens;
 - visual tests remain deterministic with motion and Unicode disabled.
 
 ## References

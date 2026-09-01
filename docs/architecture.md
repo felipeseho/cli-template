@@ -50,13 +50,17 @@ bin/
 src/
   index.ts
   cli/
+    base-command.ts
+    help.ts
   commands/
-    ui.ts
     doctor.ts
     task/
       list.ts
       run.ts
   runtime/
+    run-cli.ts
+  terminal/
+    brand.ts
   components/
     ui/
   lib/
@@ -95,6 +99,7 @@ test/
   features/
   cli/
   commands/
+  runtime/
   tui/
   fixtures/
   package/
@@ -154,27 +159,33 @@ The rules behind this graph are:
 
 Minimal executable entrypoints:
 
-- `dev.js` starts oclif from TypeScript/TSX sources during development;
-- `run.js` loads compiled commands from `dist/`.
+- `dev.js` loads TypeScript/TSX sources during development and calls the shared CLI bootstrap;
+- `run.js` loads the compiled bootstrap from `dist/` and is the only bin published in the package.
 
 The generated manifest is ignored by Git so development always rediscovers source commands.
-`dev.js` removes that disposable artifact before startup. Entrypoints contain no business logic.
+`dev.js` removes that disposable artifact before startup. Both entrypoints delegate to
+`src/runtime/run-cli.ts` and contain no product behavior.
 
 ### `src/commands/`
 
 Thin oclif classes declare arguments, flags, descriptions, examples, and help. They parse input,
-validate CLI-specific combinations, resolve application services, invoke a use case or the
-interactive runtime, present the result, and set the exit code.
+resolve the delivery mode, obtain application services, invoke a use case or the dashboard runtime,
+present the result, and set the exit code.
 
 The file path determines the command ID. With `"topicSeparator": " "`,
 `src/commands/task/list.ts` is discovered as `task list`.
 
 Commands are not registered manually and never invoke another command class to share behavior.
+Dashboard-capable commands derive from `DashboardCommand`. Its pure mode resolver gives JSON first
+priority, selects text for `--no-interactive` or a missing TTY, and otherwise selects the command's
+TUI route. The current mappings are `task list` → `task-list`, `task run` → `task-run`, and
+`doctor` → `doctor`.
 
 ### `src/runtime/`
 
 The runtime is the composition and lifecycle boundary. It:
 
+- dispatches argv between the root dashboard, root help, and oclif;
 - builds the application service facade;
 - wires ports to concrete adapters;
 - detects TTY capabilities;
@@ -182,19 +193,31 @@ The runtime is the composition and lifecycle boundary. It:
 - mounts the single Ink root;
 - enters and leaves the alternate screen.
 
-The caller always awaits `waitUntilExit()`, and terminal cleanup belongs in a `finally` block.
-`services.ts` defines the facade consumed by commands and the TUI; only the container knows all
-concrete implementations.
+With no arguments, the bootstrap opens Dashboard Home when stdin and stdout are TTYs. Without those
+capabilities, or for root `--no-interactive`, it delegates to oclif's root help. Every other argv is
+passed through unchanged. The bootstrap runs oclif `init` and `finally` hooks around a root TUI
+session, flushes successful execution, and invokes the oclif error handler only after cleanup.
+
+The caller always awaits `waitUntilExit()`, propagates the Ink exit code, and keeps terminal cleanup
+in a `finally` block. `services.ts` defines the facade consumed by commands and the TUI; only the
+container knows all concrete implementations.
 
 ### `src/cli/`
 
 Shared textual delivery infrastructure lives here:
 
 - `BaseCommand`;
+- `DashboardCommand` and the adaptive delivery-mode resolver;
+- branded root, topic, command, and parsing-error help;
 - JSON serialization without ANSI;
 - terminal-text sanitization;
 - reusable table formatting;
 - the central CLI error contract.
+
+The help renderer is static oclif output rather than Ink. It has an 80-column maximum, adapts to
+narrower output, and derives usage, arguments, flags, descriptions, and examples from oclif
+metadata. If `NO_COLOR`, `NO_UNICODE`, or `TERM=dumb` applies, help selects a deterministic
+ANSI-free, ASCII-safe fallback. JSON errors never receive contextual help text.
 
 Feature-specific presenters, output DTOs, and error mappers stay inside that feature's `cli/`
 folder.
@@ -241,25 +264,29 @@ delivery concern: feature use cases never branch on terminal dimensions. Session
 state, such as recent runs and the latest diagnostic report, belongs to the shell and is not added to
 domain results.
 
-### `src/components/`, `src/lib/`, and `src/providers/`
+### `src/components/`, `src/lib/`, `src/providers/`, and `src/terminal/`
 
-These folders support the vendored termcn source. Shared component types live in `components`;
-styles, symbols, text utilities, and terminal themes live in `lib`; the explicit `ThemeProvider`
-lives in `providers`.
+The first three folders support the vendored termcn source. Shared component types live in
+`components`; styles, symbols, text utilities, and terminal themes live in `lib`; the explicit
+`ThemeProvider` lives in `providers`. Neutral product brand tokens live in `terminal`: purple
+`#8B5CF6`, cyan `#22D3EE`, muted `#94A3B8`, `◆`/`<>` for the mark, and `›`/`>` for breadcrumbs.
+Static help and the TUI select the Unicode or ASCII representation according to terminal
+capabilities instead of duplicating raw values.
 
 `components.json` maps registry artifacts to their real folders. Local imports use the `@/*` alias
 instead of deep relative paths.
 
 ### `test/`
 
-| Folder          | Coverage                                                     |
-| --------------- | ------------------------------------------------------------ |
-| `test/features` | Feature core, adapters, CLI presenters, and feature TUI      |
-| `test/cli`      | Shared textual delivery helpers                              |
-| `test/commands` | oclif behavior, streams, JSON, and exit codes                |
-| `test/tui`      | Global frames, routing, keyboard input, and terminal runtime |
-| `test/fixtures` | Deterministic workspaces                                     |
-| `test/package`  | Helpers for validating the published artifact                |
+| Folder          | Coverage                                                       |
+| --------------- | -------------------------------------------------------------- |
+| `test/features` | Feature core, adapters, CLI presenters, and feature TUI        |
+| `test/cli`      | Adaptive mode resolution, static help, text, and JSON helpers  |
+| `test/commands` | oclif behavior, routes, streams, JSON, and exit codes          |
+| `test/runtime`  | Root dispatch, hooks, cleanup, flush, and error handling       |
+| `test/tui`      | Global frames, routing, keyboard input, and terminal lifecycle |
+| `test/fixtures` | Deterministic workspaces                                       |
+| `test/package`  | Helpers for validating the published artifact                  |
 
 ### `scripts/`, `docs/`, and `.github/workflows/`
 
@@ -275,43 +302,66 @@ scripts available locally.
 sequenceDiagram
   actor User
   participant Command as task run command
+  participant Mode as Delivery resolver
+  participant TUI as Dashboard task-run route
   participant Services as Application services
   participant Workspace as Workspace reader
   participant UseCase as Run-task use case
   participant Runner as Execa task runner
 
   User->>Command: mycli task run build
+  Command->>Mode: flags + TTY capabilities
   Command->>Services: readWorkspace(cwd)
   Services->>Workspace: read package.json
   Workspace-->>Services: Workspace
   Services-->>Command: Workspace
-  Command->>Services: runTask(input)
+  alt TTY dashboard
+    Mode-->>Command: tui
+    Command->>TUI: mount with script + output limit
+    TUI->>Services: runTask(input)
+  else Plain text
+    Mode-->>Command: text
+    Command->>Services: runTask(input)
+  else JSON
+    Mode-->>Command: json
+    Command->>Services: runTask(input)
+  end
   Services->>UseCase: execute(input)
   UseCase->>Runner: npm run -- build
   Note over Runner: shell: false + AbortSignal
   Runner-->>UseCase: started/output/completed events
-  UseCase-->>Command: TaskResult
-  alt Human output
+  UseCase-->>Services: TaskResult
+  alt Dashboard output
+    Services-->>TUI: typed events + result
+    TUI-->>User: progress, logs, and summary
+  else Plain text output
     Command-->>User: streamed output + summary
   else JSON output
     Command-->>User: one ANSI-free JSON document
   end
 ```
 
-The use case validates the requested name against `package.json#scripts` before creating a process.
-The `--` separator prevents script names beginning with a hyphen from becoming npm options. Output
-events can stream without limit while retained stdout and stderr remain bounded in memory.
+The command validates the requested name before mounting Ink, and the use case validates it against
+`package.json#scripts` before creating a process. The `--` separator prevents script names beginning
+with a hyphen from becoming npm options. Output events can stream without limit while retained
+stdout and stderr remain bounded in memory. The command's `--output-limit` value is propagated
+through the app, router, task screen, and state controller; Dashboard Home uses the adapter default.
 
 A single `AbortSignal` connects `Ctrl+C` to the child process. Cancellation returns `130` and the
-runtime restores terminal state during teardown.
+runtime restores terminal state during teardown. Screen-level asynchronous failures propagate back
+to the invoking command instead of producing a false success: an unreadable task-list workspace or
+a rejected diagnostic run returns `1`. A nonzero dashboard runtime exit code takes priority;
+otherwise `task run` returns the task's exit code.
 
-### Interactive lifecycle
+### Adaptive dashboard lifecycle
 
 ```mermaid
 stateDiagram-v2
   [*] --> CapabilityCheck
-  CapabilityCheck --> Help: no TTY
-  CapabilityCheck --> Mounting: interactive TTY
+  CapabilityCheck --> Help: root + no TTY or --no-interactive
+  CapabilityCheck --> Text: command + no TTY or --no-interactive
+  CapabilityCheck --> JSON: --json
+  CapabilityCheck --> Mounting: TTY dashboard
   Mounting --> Idle: Ink root mounted
   Idle --> Running: start operation
   Running --> Idle: completed or failed
@@ -320,12 +370,16 @@ stateDiagram-v2
   Idle --> Exiting: Esc or Ctrl+C
   Exiting --> Restored: cleanup
   Help --> [*]
+  Text --> [*]
+  JSON --> [*]
   Restored --> [*]
 ```
 
-The TUI is mounted once with `alternateScreen: true`. While an operation is active, `Ctrl+C` means
-cancel; while idle, it means exit. Screens convert use-case events into state instead of writing to
-stdout during rendering.
+`--json` takes priority even when `--no-interactive` is present. With a usable TTY, `task list`,
+`task run`, and `doctor` mount the same Ink root directly at their respective routes. The TUI is
+mounted once with `alternateScreen: true`. While an operation is active, `Ctrl+C` means cancel;
+while idle, it means exit. Screens convert use-case events into state instead of writing to stdout
+during rendering.
 
 ## TypeScript, aliases, and the manifest
 
@@ -369,6 +423,8 @@ Before merging a new capability, confirm that:
 - expected errors have stable typed representations;
 - infrastructure implements a port and is wired only by the container;
 - JSON output is data-only and ANSI-free;
+- adaptive commands resolve JSON before text and TUI delivery;
+- static help and the TUI consume the same neutral brand tokens;
 - long-running operations publish events and support cancellation;
 - commands and screens contain presentation and lifecycle logic only;
 - the relevant dependency boundaries still pass ESLint.

@@ -5,6 +5,7 @@ import type {ApplicationServices} from '@/runtime/services.js'
 
 export interface UseWorkspaceOptions {
   readonly cwd: string
+  readonly onError?: (error: unknown) => void
   readonly readWorkspace: ApplicationServices['readWorkspace']
 }
 
@@ -14,7 +15,11 @@ export interface UseWorkspaceResult {
   readonly workspace?: Workspace
 }
 
-export function useWorkspace({cwd, readWorkspace}: UseWorkspaceOptions): UseWorkspaceResult {
+export function useWorkspace({
+  cwd,
+  onError,
+  readWorkspace,
+}: UseWorkspaceOptions): UseWorkspaceResult {
   const [workspace, setWorkspace] = useState<Workspace>()
   const [error, setError] = useState<string>()
   const [loading, setLoading] = useState(true)
@@ -32,6 +37,7 @@ export function useWorkspace({cwd, readWorkspace}: UseWorkspaceOptions): UseWork
         if (active) {
           setWorkspace(undefined)
           setError(caught instanceof Error ? caught.message : String(caught))
+          onError?.(caught)
         }
       })
       .finally(() => {
@@ -41,7 +47,7 @@ export function useWorkspace({cwd, readWorkspace}: UseWorkspaceOptions): UseWork
     return () => {
       active = false
     }
-  }, [cwd, readWorkspace])
+  }, [cwd, onError, readWorkspace])
 
   return {error, loading, workspace}
 }

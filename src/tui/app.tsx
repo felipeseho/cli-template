@@ -30,11 +30,15 @@ export interface AppProps {
   readonly initialTask?: string
   readonly name?: string
   readonly onDiagnosticsCompleted?: (report: DiagnosticReport) => void
+  readonly onDiagnosticsError?: (error: unknown) => void
   readonly onExit?: (code: number) => void
   readonly onTaskCompleted?: (result: TaskResult) => void
+  readonly onTaskError?: (error: unknown) => void
+  readonly onWorkspaceError?: (error: unknown) => void
   readonly services: ApplicationServices
   readonly stdinIsTTY?: boolean
   readonly stdoutIsTTY?: boolean
+  readonly taskOutputLimit?: number
   readonly version?: string
 }
 
@@ -44,11 +48,15 @@ interface AppContentProps extends Required<
   readonly initialRoute?: InitialRoute
   readonly initialTask?: string
   readonly onDiagnosticsCompleted?: (report: DiagnosticReport) => void
+  readonly onDiagnosticsError?: (error: unknown) => void
   readonly onExit?: (code: number) => void
   readonly onTaskCompleted?: (result: TaskResult) => void
+  readonly onTaskError?: (error: unknown) => void
+  readonly onWorkspaceError?: (error: unknown) => void
   readonly services: ApplicationServices
   readonly stdinIsTTY: boolean
   readonly stdoutIsTTY: boolean
+  readonly taskOutputLimit?: number
 }
 
 function AppContent({
@@ -58,11 +66,15 @@ function AppContent({
   initialTask,
   name,
   onDiagnosticsCompleted,
+  onDiagnosticsError,
   onExit,
   onTaskCompleted,
+  onTaskError,
+  onWorkspaceError,
   services,
   stdinIsTTY,
   stdoutIsTTY,
+  taskOutputLimit,
   version,
 }: AppContentProps) {
   const {exit} = useApp()
@@ -92,6 +104,7 @@ function AppContent({
     workspace,
   } = useWorkspace({
     cwd,
+    onError: onWorkspaceError,
     readWorkspace,
   })
   const tasks = useMemo(() => (workspace ? listTasks(workspace) : []), [listTasks, workspace])
@@ -445,13 +458,16 @@ function AppContent({
         layout={layout}
         navigate={navigate}
         onDiagnosticsCompleted={handleDiagnosticsCompleted}
+        onDiagnosticsError={onDiagnosticsError}
         onDialogOpenChange={setDialogOpen}
         onTaskActivityChange={handleActivityChange}
         onTaskCompleted={handleTaskCompleted}
+        onTaskError={onTaskError}
         recentRuns={recentRuns}
         route={route}
         services={services}
         tasks={tasks}
+        taskOutputLimit={taskOutputLimit}
         viewportRows={viewportRows}
         wide={wide}
         workspace={workspace}
@@ -469,11 +485,15 @@ export function App({
   initialTask,
   name = 'mycli',
   onDiagnosticsCompleted,
+  onDiagnosticsError,
   onExit,
   onTaskCompleted,
+  onTaskError,
+  onWorkspaceError,
   services,
   stdinIsTTY = process.stdin.isTTY === true,
   stdoutIsTTY = process.stdout.isTTY === true,
+  taskOutputLimit,
   version = '0.0.0',
 }: AppProps) {
   return (
@@ -485,11 +505,15 @@ export function App({
         initialTask={initialTask}
         name={name}
         onDiagnosticsCompleted={onDiagnosticsCompleted}
+        onDiagnosticsError={onDiagnosticsError}
         onExit={onExit}
         onTaskCompleted={onTaskCompleted}
+        onTaskError={onTaskError}
+        onWorkspaceError={onWorkspaceError}
         services={services}
         stdinIsTTY={stdinIsTTY}
         stdoutIsTTY={stdoutIsTTY}
+        taskOutputLimit={taskOutputLimit}
         version={version}
       />
     </ThemeProvider>

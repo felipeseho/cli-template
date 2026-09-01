@@ -36,7 +36,8 @@ Replace the placeholders as one coordinated change:
 - [ ] Update `description`, `author`, `homepage`, `bugs`, and `repository`.
 - [ ] Update `package.json#oclif#bin` and any help or example references to the binary.
 - [ ] Replace the README title, positioning, examples, links, badges, and introductory copy.
-- [ ] Update the product name and description shown by the TUI header and theme.
+- [ ] Update the product name and description shown by the dashboard and static help.
+- [ ] Replace the shared terminal brand tokens before customizing individual TUI components.
 - [ ] Review remaining placeholders with:
 
   ```bash
@@ -85,18 +86,32 @@ Test the TUI in at least an 80×24 and a 120×40 terminal:
 
 ```bash
 ./bin/run.js
-./bin/run.js task list --interactive
-./bin/run.js doctor --interactive
+./bin/run.js task list
+./bin/run.js doctor
+```
+
+Then verify the explicit plain-text and structured paths:
+
+```bash
+./bin/run.js --no-interactive
+./bin/run.js task list --no-interactive
+./bin/run.js doctor --json --no-interactive
 ```
 
 Confirm every item below before the first merge:
 
-- the root command opens the TUI when stdin and stdout are TTYs;
-- the root command prints help and exits when no TTY is available;
-- `doctor --json` and `task list --json` produce parseable JSON without ANSI;
-- `--interactive --json` fails with exit code `2`;
+- the root command opens Dashboard Home when stdin and stdout are TTYs;
+- the root command prints branded static help when no TTY is available or when passed
+  `--no-interactive`;
+- `task list`, `task run`, and `doctor` open their corresponding dashboard routes in a TTY;
+- the same commands produce plain text without a TTY or with `--no-interactive`;
+- `doctor --json` and `task list --json` produce parseable JSON without ANSI, including when
+  combined with `--no-interactive`;
+- root, topic, command, and parsing-error help use the product identity without mounting Ink;
+- each of `NO_COLOR`, `NO_UNICODE`, and `TERM=dumb` selects ANSI-free, ASCII-safe help;
+- the removed `ui`, `--interactive`, and `-i` interfaces fail with exit code `2`;
 - cancelling a task leaves no orphan process and restores the terminal;
-- the tarball contains the build, bins, manifest, README, and license;
+- the tarball contains the build, production bin, manifest, README, and license;
 - the tarball excludes source files, tests, internal docs, and secrets;
 - packaged JavaScript contains no unresolved `@/...` imports.
 
@@ -144,7 +159,7 @@ product decision. Never commit registry tokens, provenance credentials, or other
 ## Recommended next steps
 
 - Remove example commands that do not belong in the product.
-- Replace theme tokens before customizing individual components.
+- Replace the shared dashboard and help brand tokens before customizing individual components.
 - Keep oclif classes and Ink screens as adapters over shared use cases.
 - Use the repository's `$create-command` Codex skill for new command scaffolds.
 - Follow [Adding a command and screen](adding-a-command.md) for production behavior.

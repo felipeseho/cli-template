@@ -92,13 +92,14 @@ workspace, and executes the packaged binary.
 - Node.js `>=24.15`
 - npm `12.0.2`, declared in `package.json#packageManager`
 - Git
-- A TTY-capable terminal for interactive mode
+- A TTY-capable terminal for the dashboard; text and JSON modes also work without one
 
 ### Run the template
 
 ```bash
 npm install
 npm run build
+./bin/run.js
 ./bin/run.js --help
 ```
 
@@ -119,27 +120,38 @@ npm run dev -- task list
 
 ## See it in action
 
-| Command                                 | What it demonstrates                                         |
-| --------------------------------------- | ------------------------------------------------------------ |
-| `mycli` or `mycli ui`                   | Opens the TUI with a TTY; otherwise prints help and exits    |
-| `mycli task list`                       | Lists scripts from the current workspace                     |
-| `mycli task list --interactive`         | Opens a searchable task browser                              |
-| `mycli task run <script>`               | Streams a declared npm script safely                         |
-| `mycli task run <script> --interactive` | Confirms, runs, reports progress, and supports cancellation  |
-| `mycli doctor`                          | Checks Node.js, npm, Git, TTY, workspace, and `package.json` |
-| `mycli doctor --interactive`            | Opens a visual diagnostic report that can be refreshed       |
-| `mycli ... --json`                      | Emits a single machine-readable JSON document without ANSI   |
+| Command                                | What it demonstrates                                                       |
+| -------------------------------------- | -------------------------------------------------------------------------- |
+| `mycli`                                | Opens Dashboard Home with a TTY; otherwise prints branded help             |
+| `mycli task list`                      | Opens the task browser with a TTY; otherwise lists scripts as text         |
+| `mycli task run <script>`              | Opens the task runner with a TTY; otherwise streams safe text output       |
+| `mycli doctor`                         | Opens diagnostics with a TTY; otherwise prints the diagnostic report       |
+| `mycli ... --no-interactive`           | Forces plain human-readable output, even when a TTY is available           |
+| `mycli ... --json`                     | Emits one machine-readable JSON document without ANSI; JSON takes priority |
+| `mycli ... --help` or `mycli help ...` | Shows compact static help with the same purple-and-cyan product identity   |
 
-`--interactive` requires stdin and stdout to be attached to a TTY and cannot be combined with
-`--json`. `task run` accepts only names already declared in `package.json#scripts`; arbitrary shell
-commands are intentionally outside the template's scope.
+Delivery is adaptive: commands with a dashboard route mount that route when stdin and stdout are
+TTYs, and fall back to plain text when either stream is not a TTY. `--no-interactive` forces that
+text fallback. `--json` takes precedence and may be combined with `--no-interactive`.
+
+`task run` accepts only names already declared in `package.json#scripts`; arbitrary shell commands
+are intentionally outside the template's scope. The former `ui` command, `--interactive`, and `-i`
+are not part of the public interface.
 
 Exit codes are part of the contract:
 
 - `0` for success;
-- `2` for invalid usage or interactive mode without a TTY;
+- `2` for invalid usage;
 - `130` for cancellation;
 - the child process exit code when a task fails.
+
+## Help that belongs to the product
+
+Root, topic, command, and parsing-error help use a compact static renderer with the same mark,
+purple, cyan, muted color, and breadcrumb language as the dashboard. It derives content from oclif
+metadata, wraps to the available width up to 80 columns, and never mounts Ink or enters the
+alternate screen. If `NO_COLOR`, `NO_UNICODE`, or `TERM=dumb` applies, help uses the same
+deterministic ANSI-free, ASCII-safe fallback.
 
 ## A real terminal application
 
@@ -153,6 +165,10 @@ The TUI runs as a single Ink root in the alternate screen and includes:
 - environment diagnostics with recommendations and refresh;
 - a `/` command palette, `?` help, and keyboard-first navigation;
 - compact, standard, and wide layouts based on terminal width and height.
+
+Running `mycli` enters this dashboard at Home. Running `task list`, `task run`, or `doctor` in a TTY
+uses the same root and navigates directly to the corresponding screen, so command and dashboard
+experiences share navigation, state handling, and visual components.
 
 While a task is running, `Ctrl+C` cancels its process. While idle, `Ctrl+C` exits the application.
 Cleanup restores raw mode, the cursor, and the screen buffer.
@@ -209,8 +225,10 @@ the product. There is no registry dependency at runtime or in CI. Add, customize
 components like any other application code.
 
 The dashboard uses source-owned termcn primitives for breadcrumbs, alerts, progress, dialogs,
-spinners, logs, tables, and focus scopes. Long-running commands only display a percentage when the
-underlying operation exposes a real total; npm scripts use phase progress and elapsed time instead.
+spinners, logs, tables, and focus scopes. Its product colors and symbols come from neutral shared
+tokens also consumed by the static help renderer. Long-running commands only display a percentage
+when the underlying operation exposes a real total; npm scripts use phase progress and elapsed time
+instead.
 
 See [Using termcn](docs/termcn.md) for registry aliases, vendored source conventions, themes, and
 Node ESM requirements.
@@ -222,7 +240,7 @@ The package starts with `"private": true` to prevent accidental publishing. The
 
 - creating a repository from the GitHub template;
 - renaming the package and binary safely;
-- validating interactive, JSON, and packaged behavior;
+- validating adaptive dashboard, plain-text, JSON, help, and packaged behavior;
 - reviewing the tarball before publication.
 
 ## Documentation

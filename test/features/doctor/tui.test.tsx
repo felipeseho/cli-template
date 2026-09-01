@@ -108,4 +108,28 @@ describe('doctor TUI', () => {
 
     instance.unmount()
   })
+
+  it('reports rejected diagnostic runs while keeping the error visible', async () => {
+    const failure = new Error('Node probe failed.')
+    const onDiagnosticsError = vi.fn()
+    const instance = render(
+      <App
+        cwd={workspace.path}
+        initialRoute="doctor"
+        onDiagnosticsError={onDiagnosticsError}
+        services={createServices({runDiagnostics: () => Promise.reject(failure)})}
+        stdinIsTTY
+        stdoutIsTTY
+      />,
+    )
+
+    await vi.waitFor(() => {
+      expect(instance.lastFrame()).toContain('Não foi possível executar o diagnóstico')
+      expect(instance.lastFrame()).toContain('Node probe failed.')
+      expect(onDiagnosticsError).toHaveBeenCalledOnce()
+      expect(onDiagnosticsError).toHaveBeenCalledWith(failure)
+    })
+
+    instance.unmount()
+  })
 })

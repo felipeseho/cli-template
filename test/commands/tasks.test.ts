@@ -54,6 +54,42 @@ describe.sequential('task commands', () => {
     })
   })
 
+  it('forces human-readable output with --no-interactive in a TTY', async () => {
+    const workspace = await createWorkspace({test: 'vitest run'})
+    process.chdir(workspace)
+    setTtyState(true)
+
+    const {error, stdout} = await runCli(['task', 'list', '--no-interactive'])
+
+    expect(error).toBeUndefined()
+    expect(stdout).toContain('Tasks in fixture-workspace')
+  })
+
+  it('keeps JSON non-interactive in a TTY and accepts --no-interactive with it', async () => {
+    const workspace = await createWorkspace({test: 'vitest run'})
+    process.chdir(workspace)
+    setTtyState(true)
+
+    const {error, stdout} = await runCli(['task', 'list', '--json', '--no-interactive'])
+
+    expect(error).toBeUndefined()
+    expect(parseJson(stdout)).toMatchObject({tasks: [{name: 'test'}]})
+  })
+
+  it('streams task output as human-readable text by default without a TTY', async () => {
+    const workspace = await createWorkspace({
+      plain: 'node -e "process.stdout.write(\'plain-task-output\')"',
+    })
+    process.chdir(workspace)
+
+    const {error, stdout} = await runCli(['task', 'run', 'plain'])
+
+    expect(error).toBeUndefined()
+    expect(stdout).toContain('plain-task-output')
+    expect(stdout).toContain('Task "plain" completed')
+    expect(stdout).toContain('(exit 0)')
+  })
+
   it('rejects an unknown task name without executing arbitrary input', async () => {
     const workspace = await createWorkspace({safe: 'node --version'})
     process.chdir(workspace)
@@ -177,7 +213,7 @@ describe.sequential('task commands', () => {
     expect(process.exitCode).toBe(7)
   })
 
-  it('rejects --interactive together with --json', async () => {
+  it('rejects the removed --interactive flag in JSON mode', async () => {
     const workspace = await createWorkspace({test: 'vitest run'})
     process.chdir(workspace)
 
@@ -185,15 +221,24 @@ describe.sequential('task commands', () => {
     const payload = parseJson(stdout)
 
     expect(error).toBeUndefined()
-    expectJsonError(payload, 2, '--interactive and --json cannot be used together')
+    expectJsonError(payload, 2, 'Nonexistent flag: --interactive')
   })
 
-  it('rejects an unknown interactive task before opening the TUI', async () => {
+  it('rejects the removed -i alias', async () => {
+    const workspace = await createWorkspace({test: 'vitest run'})
+    process.chdir(workspace)
+
+    const {error} = await runCli(['task', 'list', '-i'])
+
+    expectThrownError(error, 2, 'Nonexistent flag: -i')
+  })
+
+  it('rejects an unknown task before opening the default TUI', async () => {
     const workspace = await createWorkspace({safe: 'node --version'})
     process.chdir(workspace)
     setTtyState(true)
 
-    const {error} = await runCli(['task', 'run', 'missing', '--interactive'])
+    const {error} = await runCli(['task', 'run', 'missing'])
 
     expectThrownError(error, 2, 'Task "missing" was not found')
   })

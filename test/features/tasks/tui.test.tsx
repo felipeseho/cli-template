@@ -2,7 +2,7 @@ import {cleanup, render} from 'ink-testing-library'
 import stringWidth from 'string-width'
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
-import type {Task, TaskResult} from '@/features/tasks/index.js'
+import type {RunTaskInput, Task, TaskResult} from '@/features/tasks/index.js'
 import type {ApplicationServices} from '@/runtime/services.js'
 import {App} from '@/tui/app.js'
 import {
@@ -279,12 +279,15 @@ describe('tasks TUI', () => {
   })
 
   it('shows failures as alerts and returns to confirmation on retry', async () => {
-    const runTask = vi.fn(() => Promise.reject(new Error('Process spawn failed.')))
+    const failure = new Error('Process spawn failed.')
+    const onTaskError = vi.fn()
+    const runTask = vi.fn(() => Promise.reject(failure))
     const instance = render(
       <App
         cwd={workspace.path}
         initialRoute="task-run"
         initialTask="build"
+        onTaskError={onTaskError}
         services={createServices({runTask})}
         stdinIsTTY
         stdoutIsTTY
@@ -301,6 +304,8 @@ describe('tasks TUI', () => {
       expect(instance.lastFrame()).toContain('Process spawn failed.')
       expect(instance.lastFrame()).toContain('[!] Executar')
       expect(instance.lastFrame()).toContain('[!] Concluir')
+      expect(onTaskError).toHaveBeenCalledOnce()
+      expect(onTaskError).toHaveBeenCalledWith(failure)
     })
 
     await flushTui()
@@ -309,6 +314,44 @@ describe('tasks TUI', () => {
       expect(instance.lastFrame()).toContain('Executar “build” neste workspace?'),
     )
     expect(runTask).toHaveBeenCalledOnce()
+
+    instance.unmount()
+  })
+
+  it.each([
+    {expected: undefined, label: 'the adapter default', taskOutputLimit: undefined},
+    {expected: 0, label: 'zero', taskOutputLimit: 0},
+    {expected: 4_096, label: 'a custom value', taskOutputLimit: 4_096},
+  ])('forwards $label as the task output limit', async ({expected, taskOutputLimit}) => {
+    const runTask = vi.fn((input: RunTaskInput) =>
+      Promise.resolve({...succeededResult, workspacePath: input.workspace.path}),
+    )
+    const instance = render(
+      <App
+        cwd={workspace.path}
+        initialRoute="task-run"
+        initialTask="build"
+        services={createServices({runTask})}
+        stdinIsTTY
+        stdoutIsTTY
+        {...(taskOutputLimit === undefined ? {} : {taskOutputLimit})}
+      />,
+    )
+
+    await vi.waitFor(() =>
+      expect(instance.lastFrame()).toContain('Executar “build” neste workspace?'),
+    )
+    await flushTui()
+    instance.stdin.write('\r')
+
+    await vi.waitFor(() => expect(runTask).toHaveBeenCalledOnce())
+    const input = runTask.mock.calls[0]?.[0]
+    expect(input).toBeDefined()
+    if (expected === undefined) {
+      expect(input).not.toHaveProperty('outputLimit')
+    } else {
+      expect(input).toHaveProperty('outputLimit', expected)
+    }
 
     instance.unmount()
   })

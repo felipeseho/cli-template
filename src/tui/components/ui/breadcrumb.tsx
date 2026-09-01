@@ -1,7 +1,7 @@
 import {Box, Text} from 'ink'
 import {useEffect, useState} from 'react'
 
-import {resolveTerminalSymbol} from '@/lib/terminal-symbols.js'
+import {resolveBrandSymbol} from '@/terminal/brand.js'
 import type {InteractionProps} from '@/tui/hooks/use-interaction.js'
 import {useInteraction} from '@/tui/hooks/use-interaction.js'
 import {useTheme} from '@/tui/hooks/use-theme.js'
@@ -48,7 +48,7 @@ export const Breadcrumb = ({
 }: BreadcrumbProps) => {
   const theme = useTheme()
   const unicode = useUnicode()
-  const resolvedSeparator = separator ?? resolveTerminalSymbol(unicode, '›', '>')
+  const resolvedSeparator = separator ?? resolveBrandSymbol('breadcrumb', unicode)
   const initialIndex = clampIndex(defaultCurrentIndex ?? items.length - 1, items.length)
   const [internalCurrentIndex, setInternalCurrentIndex] = useState(initialIndex)
   const resolvedCurrentIndex = clampIndex(

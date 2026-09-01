@@ -1,14 +1,33 @@
 import {Command, Flags, type Interfaces} from '@oclif/core'
 
 import {describeCliError, type CliErrorMapper} from './errors.js'
+import {showHelp} from './help.js'
 import {serializeJson} from './json.js'
 import {sanitizeTerminalText} from './text.js'
 import {isInteractiveTerminal} from '../runtime/tty.js'
 
-export const interactiveFlag = Flags.boolean({
-  char: 'i',
-  description: 'Open the command-specific interactive screen.',
+export type OutputMode = 'json' | 'text' | 'tui'
+
+export interface OutputModeOptions {
+  readonly interactiveTerminal: boolean
+  readonly json: boolean
+  readonly noInteractive: boolean
+}
+
+export const noInteractiveFlag = Flags.boolean({
+  description: 'Use plain text output instead of the interactive dashboard.',
+  helpGroup: 'GLOBAL',
 })
+
+export function resolveOutputMode({
+  interactiveTerminal,
+  json,
+  noInteractive,
+}: OutputModeOptions): OutputMode {
+  if (json) return 'json'
+  if (noInteractive || !interactiveTerminal) return 'text'
+  return 'tui'
+}
 
 function messageFor(error: unknown): string {
   return sanitizeTerminalText(
@@ -22,6 +41,11 @@ function propertyFrom(error: unknown, key: string): unknown {
   }
 
   return Reflect.get(error, key)
+}
+
+function setProperty(error: unknown, key: string, value: unknown): void {
+  if ((typeof error !== 'object' || error === null) && typeof error !== 'function') return
+  Reflect.set(error, key, value)
 }
 
 function configuredExitCode(error: unknown): number | undefined {
@@ -53,10 +77,23 @@ function suggestionsFor(error: unknown): readonly string[] | undefined {
 export abstract class BaseCommand extends Command {
   static override enableJsonFlag = true
 
-  protected override catch(error: Interfaces.CommandError): Promise<unknown> {
+  protected override async catch(error: Interfaces.CommandError): Promise<unknown> {
     const exitCode = configuredExitCode(error)
     if (exitCode !== undefined) process.exitCode = exitCode
-    return super.catch(error) as Promise<unknown>
+
+    if (!this.jsonEnabled() && propertyFrom(error, 'showHelp') === true) {
+      setProperty(error, 'showHelp', false)
+      setProperty(error, 'skipOclifErrorHandling', true)
+      this.logToStderr(sanitizeTerminalText(error.message))
+      this.logToStderr()
+      await showHelp(this.config, this.id?.split(':') ?? [], {
+        sections: ['usage', 'arguments', 'flags'],
+        sendToStderr: true,
+      })
+      throw error
+    }
+
+    return super.catch(error)
   }
 
   protected override toSuccessJson(result: unknown): unknown {
@@ -78,22 +115,6 @@ export abstract class BaseCommand extends Command {
     return JSON.parse(serializeJson(envelope)) as unknown
   }
 
-  protected assertOutputMode(interactive: boolean | undefined): void {
-    if (interactive && this.jsonEnabled()) {
-      this.error('--interactive and --json cannot be used together.', {exit: 2})
-    }
-
-    if (interactive && !isInteractiveTerminal()) {
-      this.error('--interactive requires stdin and stdout to be attached to a TTY.', {
-        exit: 2,
-        suggestions: [
-          'Remove --interactive to use textual output.',
-          'Use --json in scripts and CI.',
-        ],
-      })
-    }
-  }
-
   protected fail(error: unknown, mappers: readonly CliErrorMapper[] = []): never {
     const descriptor = describeCliError(error, mappers)
     if (descriptor) {
@@ -105,5 +126,19 @@ export abstract class BaseCommand extends Command {
     }
 
     this.error(messageFor(error), {exit: 1})
+  }
+}
+
+export abstract class DashboardCommand extends BaseCommand {
+  static override baseFlags = {
+    'no-interactive': noInteractiveFlag,
+  }
+
+  protected outputMode(noInteractive: boolean | undefined): OutputMode {
+    return resolveOutputMode({
+      interactiveTerminal: isInteractiveTerminal(),
+      json: this.jsonEnabled(),
+      noInteractive: noInteractive === true,
+    })
   }
 }

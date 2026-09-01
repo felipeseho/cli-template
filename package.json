@@ -17,7 +17,7 @@
     }
   },
   "files": [
-    "bin",
+    "bin/run.js",
     "dist",
     "oclif.manifest.json",
     "README.md",
@@ -81,7 +81,10 @@
   "oclif": {
     "bin": "mycli",
     "dirname": "mycli",
-    "default": "ui",
+    "helpClass": "./dist/cli/help",
+    "helpOptions": {
+      "hideCommandSummaryInDescription": true
+    },
     "commands": {
       "strategy": "pattern",
       "target": "./dist/commands"

@@ -1,60 +1,60 @@
 ---
 name: create-command
-description: Criar e validar um novo comando oclif neste repositório a partir de perguntas sobre nome, descrição, aliases, argumentos, flags e exemplos. Use quando o usuário pedir para adicionar, criar ou gerar o scaffold de um comando CLI; não use para implementar a lógica de negócio de um comando existente.
+description: Create and validate a new oclif command in this repository by asking about its name, description, aliases, arguments, flags, and examples. Use when the user asks to add, create, or generate a CLI command scaffold; do not use to implement business logic for an existing command.
 ---
 
-# Criar comando oclif
+# Create an oclif command
 
-Crie um scaffold TypeScript compilável em `src/commands/`. O comportamento inicial do comando deve ser somente um `console.log`; parsing e metadados do oclif não contam como lógica de negócio.
+Create a compilable TypeScript scaffold in `src/commands/`. The command's initial behavior must be only a `console.log`; oclif parsing and metadata do not count as business logic.
 
-## Antes de perguntar
+## Before asking questions
 
-Leia `package.json`, `docs/adding-a-command.md` e o comando existente mais parecido. Preserve as convenções locais caso o projeto tenha mudado desde a criação desta skill.
+Read `package.json`, `docs/adding-a-command.md`, and the most similar existing command. Preserve local conventions if the project has changed since this skill was created.
 
-Neste repositório:
+In this repository:
 
-- oclif descobre comandos pelo caminho sob `src/commands/`;
-- o separador público de tópicos é espaço;
-- comandos simples estendem `Command` de `@oclif/core`;
-- classes são exportadas como `default`, usam `static override` e chamam `this.parse()`;
-- o código usa TypeScript ESM, aspas simples, sem ponto e vírgula e largura de 100 colunas.
+- oclif discovers commands from their path under `src/commands/`;
+- the public topic separator is a space;
+- simple commands extend `Command` from `@oclif/core`;
+- classes are exported as `default`, use `static override`, and call `this.parse()`;
+- the code uses TypeScript ESM, single quotes, no semicolons, and a 100-column width.
 
-Não use `BaseCommand` para este scaffold. Ele habilita `--json`, enquanto `console.log` não participa do contrato JSON do projeto.
+Do not use `BaseCommand` for this scaffold. It enables `--json`, while `console.log` does not participate in the project's JSON contract.
 
-## Coletar as informações
+## Collect the information
 
-Antes de editar arquivos, faça uma única pergunta compacta contendo apenas os campos ainda ausentes. Solicite:
+Before editing files, ask one compact question containing only the fields that are still missing. Request:
 
-1. **ID do comando** — obrigatório, em segmentos lower-kebab-case separados por espaço, por exemplo `project create`.
-2. **Descrição** — obrigatória e adequada para o help.
-3. **Resumo** — opcional; derive uma versão curta da descrição se omitido.
-4. **Aliases do comando** — opcionais; aceite espaço ou `:` como separador de tópico.
-5. **Argumentos posicionais** — opcionais; para cada um: nome, descrição, obrigatório ou não, valor padrão, opções permitidas e se aceita múltiplos valores.
-6. **Flags** — opcionais; para cada uma: nome longo, tipo (`boolean`, `string` ou `integer`), caractere curto, descrição, obrigatoriedade e valor padrão. Pergunte opções permitidas e multiplicidade somente para `string`; para `integer`, pergunte mínimo, máximo e multiplicidade. Não pergunte opções ou multiplicidade para `boolean`.
-7. **Exemplos adicionais** — opcionais; sempre gere ao menos o exemplo da invocação canônica.
+1. **Command ID** — required, in lower-kebab-case segments separated by spaces, for example `project create`.
+2. **Description** — required and suitable for help output.
+3. **Summary** — optional; derive a short version of the description if omitted.
+4. **Command aliases** — optional; accept a space or `:` as the topic separator.
+5. **Positional arguments** — optional; for each one: name, description, whether it is required, default value, allowed options, and whether it accepts multiple values.
+6. **Flags** — optional; for each one: long name, type (`boolean`, `string`, or `integer`), short character, description, whether it is required, and default value. Ask about allowed options and multiplicity only for `string`; for `integer`, ask about minimum, maximum, and multiplicity. Do not ask about options or multiplicity for `boolean`.
+7. **Additional examples** — optional; always generate at least the canonical invocation example.
 
-Diga que o usuário pode responder `padrão` para todos os campos opcionais. Não repita perguntas já respondidas. Se somente um detalhe obrigatório continuar ambíguo, pergunte apenas por ele.
+Tell the user they can answer `default` for all optional fields. Do not repeat questions that have already been answered. If only one required detail remains ambiguous, ask only about that detail.
 
-## Validar e derivar nomes
+## Validate and derive names
 
-- Aceite `project create` e `project:create` como entrada, mas use `project create` ao conversar e nos exemplos.
-- Converta o ID canônico em `src/commands/project/create.ts` e na classe `ProjectCreate`.
-- Em `static override aliases`, normalize aliases hierárquicos para o formato interno do oclif, como `project:new`.
-- Exija segmentos não vazios em lower-kebab-case. Rejeite caminhos absolutos, `.`, `..`, barras, contrabarras e qualquer destino fora de `src/commands/`.
-- Rejeite `index` como último segmento: o oclif remove esse nome do ID descoberto e poderia registrar outro comando ou causar colisão.
-- Confirme que o arquivo, o ID e os aliases ainda não existem. Nunca sobrescreva um arquivo sem confirmação explícita.
-- Mantenha nomes de argumentos e flags únicos. Mantenha caracteres curtos de flags únicos.
-- Posicione argumentos obrigatórios antes dos opcionais. Um argumento com múltiplos valores deve ser o último e o único desse tipo, e todos os argumentos anteriores a ele devem ser obrigatórios.
-- Não invente aliases, argumentos ou flags. Use listas vazias quando o usuário responder `padrão`.
-- Mostre o ID, o caminho e o nome da classe derivados antes de gravar somente quando houver normalização ambígua ou colisão; caso contrário, prossiga.
+- Accept `project create` and `project:create` as input, but use `project create` when communicating and in examples.
+- Convert the canonical ID to `src/commands/project/create.ts` and the `ProjectCreate` class.
+- In `static override aliases`, normalize hierarchical aliases to oclif's internal format, such as `project:new`.
+- Require non-empty lower-kebab-case segments. Reject absolute paths, `.`, `..`, slashes, backslashes, and any destination outside `src/commands/`.
+- Reject `index` as the last segment: oclif removes this name from the discovered ID and could register another command or cause a collision.
+- Confirm that the file, ID, and aliases do not already exist. Never overwrite a file without explicit confirmation.
+- Keep argument and flag names unique. Keep flag short characters unique.
+- Place required arguments before optional ones. An argument with multiple values must be the last and only argument of its kind, and all arguments before it must be required.
+- Do not invent aliases, arguments, or flags. Use empty lists when the user answers `default`.
+- Show the derived ID, path, and class name before writing only when normalization is ambiguous or there is a collision; otherwise, proceed.
 
-## Gerar o arquivo
+## Generate the file
 
-Crie somente `src/commands/<segmentos>.ts`, salvo se o usuário pedir explicitamente testes, documentação, feature ou TUI. Não edite `dist/`, `oclif.manifest.json` nem faça registro manual do comando.
+Create only `src/commands/<segments>.ts`, unless the user explicitly asks for tests, documentation, a feature, or a TUI. Do not edit `dist/`, `oclif.manifest.json`, or manually register the command.
 
-Use imports condicionais de `Args`, `Command` e `Flags`. Omita blocos estáticos vazios. Preserve a seguinte ordem quando os blocos existirem: `aliases`, `args`, `description`, `examples`, `flags`, `summary`.
+Use conditional imports of `Args`, `Command`, and `Flags`. Omit empty static blocks. Preserve the following order when blocks exist: `aliases`, `args`, `description`, `examples`, `flags`, `summary`.
 
-O resultado deve seguir esta forma, adaptada às respostas:
+The result should follow this form, adapted to the answers:
 
 ```ts
 import {Args, Command, Flags} from '@oclif/core'
@@ -88,29 +88,29 @@ export default class ProjectCreate extends Command {
 }
 ```
 
-Regras do template:
+Template rules:
 
-- Use `Args.string()` para argumentos posicionais.
-- Use `Flags.boolean()`, `Flags.string()` ou `Flags.integer()` conforme a resposta.
-- Em `Flags.boolean()`, nunca inclua `options` nem `multiple`.
-- Em `Flags.string()`, `options` deve conter strings; `multiple` é permitido.
-- Em `Flags.integer()`, use `min` e `max` para limitar valores; `multiple` é permitido, mas não gere `options`.
-- Quando `multiple: true`, qualquer `default` deve ser um array do tipo correspondente.
-- Inclua somente propriedades que tenham valor informado ou necessário.
-- Use `<%= config.bin %>` nos exemplos; aliases aparecem com espaços nos exemplos e com `:` em `aliases`.
-- Se não houver argumentos nem flags, ainda execute `await this.parse(NomeDaClasse)` e depois `console.log('Command "id" executed.')`.
-- Se houver argumentos ou flags, use ambos os objetos retornados pelo parse no `console.log`, como no exemplo, para manter o placeholder observável e sem variáveis não utilizadas.
-- O `console.log` deve ser a única ação do comando. Não adicione serviços, I/O, prompts em runtime, JSON, modo interativo ou tratamento de erros sem pedido explícito.
+- Use `Args.string()` for positional arguments.
+- Use `Flags.boolean()`, `Flags.string()`, or `Flags.integer()` according to the answer.
+- In `Flags.boolean()`, never include `options` or `multiple`.
+- In `Flags.string()`, `options` must contain strings; `multiple` is allowed.
+- In `Flags.integer()`, use `min` and `max` to limit values; `multiple` is allowed, but do not generate `options`.
+- When `multiple: true`, any `default` must be an array of the corresponding type.
+- Include only properties that have an informed or necessary value.
+- Use `<%= config.bin %>` in examples; aliases appear with spaces in examples and with `:` in `aliases`.
+- If there are no arguments or flags, still execute `await this.parse(ClassName)` and then `console.log('Command "id" executed.')`.
+- If there are arguments or flags, use both objects returned by `parse` in `console.log`, as in the example, to keep the placeholder observable and avoid unused variables.
+- `console.log` must be the command's only action. Do not add services, I/O, runtime prompts, JSON, interactive mode, or error handling without an explicit request.
 
-## Verificar
+## Verify
 
-Após criar o arquivo:
+After creating the file:
 
-1. Formate somente o novo arquivo com `npm exec -- prettier --write <arquivo>`.
-2. Execute `npm exec -- eslint <arquivo>`.
-3. Execute `npm run typecheck`.
-4. Execute o comando em desenvolvimento com valores seguros para todos os argumentos e flags obrigatórios e confirme a mensagem do `console.log`.
+1. Format only the new file with `npm exec -- prettier --write <file>`.
+2. Run `npm exec -- eslint <file>`.
+3. Run `npm run typecheck`.
+4. Run the command in development with safe values for all required arguments and flags and confirm the `console.log` message.
 
-Se o usuário pedir a validação completa do repositório, execute `npm run check` e `npm run smoke:package`. Não corrija falhas preexistentes ou arquivos fora do escopo sem autorização.
+If the user asks for full repository validation, run `npm run check` and `npm run smoke:package`. Do not fix pre-existing failures or files outside the scope without authorization.
 
-Ao concluir, informe o caminho criado, a invocação canônica, os aliases e quais verificações passaram. Destaque qualquer default assumido ou validação que não pôde ser executada.
+When complete, report the created path, canonical invocation, aliases, and which checks passed. Call out any assumed default or validation that could not be run.

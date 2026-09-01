@@ -97,6 +97,10 @@ function validateArchive(packResult, binPath) {
     fail('Packed artifact does not contain compiled JavaScript under dist/.')
   }
 
+  if (files.some((path) => path.toLowerCase() === 'bin/dev.js')) {
+    fail('Packed artifact must not contain the source-only bin/dev.js entrypoint.')
+  }
+
   const sourceMaps = files.filter((path) => path.toLowerCase().endsWith('.map'))
   if (sourceMaps.length > 0) {
     fail(`Packed artifact contains source maps:\n${sourceMaps.join('\n')}`)
@@ -201,7 +205,7 @@ function parseJsonOutput(result, label) {
   }
 }
 
-function runInstalledBin(binName, installRoot, arguments_, workspace) {
+function runInstalledBin(binName, installRoot, arguments_, workspace, options = {}) {
   const extension = process.platform === 'win32' ? '.cmd' : ''
   const shim = join(installRoot, 'node_modules', '.bin', `${binName}${extension}`)
 
@@ -209,6 +213,7 @@ function runInstalledBin(binName, installRoot, arguments_, workspace) {
 
   return run(shim, arguments_, {
     cwd: workspace,
+    expectedStatus: options.expectedStatus,
     input: '',
     shell: process.platform === 'win32',
     timeout: 15_000,
@@ -271,8 +276,8 @@ try {
 
   console.log(`Running ${binName} from the installed package...`)
   const help = runInstalledBin(binName, installRoot, ['--help'], workspace)
-  if (!/usage|commands/i.test(`${help.stdout}\n${help.stderr}`)) {
-    fail('--help did not contain usage or command information.')
+  if (!/MYCLI/u.test(help.stdout) || !/usage|commands/i.test(help.stdout)) {
+    fail('--help did not contain branded usage or command information.')
   }
 
   const version = runInstalledBin(binName, installRoot, ['--version'], workspace)
@@ -290,8 +295,43 @@ try {
   )
 
   const root = runInstalledBin(binName, installRoot, [], workspace)
-  if (!/usage|commands/i.test(`${root.stdout}\n${root.stderr}`)) {
-    fail('The root command did not print help when invoked without a TTY.')
+  if (!/MYCLI/u.test(root.stdout) || !/usage|commands/i.test(root.stdout)) {
+    fail('The root invocation did not print branded help without a TTY.')
+  }
+
+  const plainRoot = runInstalledBin(binName, installRoot, ['--no-interactive'], workspace)
+  if (plainRoot.stdout !== root.stdout) {
+    fail('Root --no-interactive did not produce the same help as the non-TTY root fallback.')
+  }
+
+  const taskListText = runInstalledBin(
+    binName,
+    installRoot,
+    ['task', 'list', '--no-interactive'],
+    workspace,
+  )
+  if (!taskListText.stdout.includes('Tasks in package-smoke-workspace')) {
+    fail('task list --no-interactive did not produce human-readable output.')
+  }
+
+  const removedUi = runInstalledBin(binName, installRoot, ['ui'], workspace, {expectedStatus: 2})
+  if (!/command ui not found/i.test(`${removedUi.stdout}\n${removedUi.stderr}`)) {
+    fail('The removed ui command did not fail as command-not-found.')
+  }
+
+  const removedInteractive = runInstalledBin(
+    binName,
+    installRoot,
+    ['task', 'list', '--interactive'],
+    workspace,
+    {expectedStatus: 2},
+  )
+  if (
+    !/nonexistent flag: --interactive/i.test(
+      `${removedInteractive.stdout}\n${removedInteractive.stderr}`,
+    )
+  ) {
+    fail('The removed --interactive flag did not fail as invalid usage.')
   }
 
   console.log(`Package smoke test passed for ${packReport.filename}.`)

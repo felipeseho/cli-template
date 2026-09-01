@@ -1,6 +1,6 @@
 import {Args, Flags} from '@oclif/core'
 
-import {BaseCommand, interactiveFlag} from '@/cli/base-command.js'
+import {DashboardCommand} from '@/cli/base-command.js'
 import {mapTaskCliError} from '@/features/tasks/cli/errors.js'
 import {presentTaskResultHuman} from '@/features/tasks/cli/presenter.js'
 import {resolveTask, type TaskEvent} from '@/features/tasks/index.js'
@@ -15,7 +15,7 @@ function streamTaskOutput(event: TaskEvent): void {
   target.write(event.chunk)
 }
 
-export default class TaskRun extends BaseCommand {
+export default class TaskRun extends DashboardCommand {
   static override args = {
     script: Args.string({
       description: 'Exact script name from package.json.',
@@ -25,11 +25,10 @@ export default class TaskRun extends BaseCommand {
   static override description = 'Run one npm script declared by the current workspace.'
   static override examples = [
     '<%= config.bin %> task run build',
-    '<%= config.bin %> task run test --interactive',
+    '<%= config.bin %> task run test --no-interactive',
     '<%= config.bin %> task run lint --json',
   ]
   static override flags = {
-    interactive: interactiveFlag,
     'output-limit': Flags.integer({
       default: 65_536,
       description: 'Maximum captured characters per output stream.',
@@ -40,11 +39,11 @@ export default class TaskRun extends BaseCommand {
 
   async run() {
     const {args, flags} = await this.parse(TaskRun)
-    this.assertOutputMode(flags.interactive)
+    const outputMode = this.outputMode(flags['no-interactive'])
     const services = createApplicationServices()
 
     try {
-      if (flags.interactive) {
+      if (outputMode === 'tui') {
         const workspace = await services.readWorkspace(process.cwd())
         const tasks = services.listTasks(workspace)
         resolveTask(tasks, args.script)
@@ -58,7 +57,11 @@ export default class TaskRun extends BaseCommand {
           onTaskCompleted: (result) => {
             taskExitCode = result.exitCode
           },
+          onTaskError: () => {
+            taskExitCode = 1
+          },
           services,
+          taskOutputLimit: flags['output-limit'],
           version: this.config.version,
         })
         const finalExitCode = exitCode === 0 ? taskExitCode : exitCode
@@ -71,14 +74,14 @@ export default class TaskRun extends BaseCommand {
 
       try {
         const result = await services.runTask({
-          ...(this.jsonEnabled() ? {} : {onEvent: streamTaskOutput}),
+          ...(outputMode === 'text' ? {onEvent: streamTaskOutput} : {}),
           outputLimit: flags['output-limit'],
           signal: signals.signal,
           taskName: args.script,
           workspace,
         })
 
-        if (!this.jsonEnabled()) this.log(`\n${presentTaskResultHuman(result)}`)
+        if (outputMode === 'text') this.log(`\n${presentTaskResultHuman(result)}`)
         if (result.exitCode !== 0) process.exitCode = result.exitCode
         return result
       } finally {
