@@ -1,34 +1,100 @@
-# my-cli
+<p align="center">
+  <img
+    src="./docs/assets/cli-template-header.png"
+    alt="A shared application core powering scriptable commands and an interactive terminal interface"
+    width="100%"
+  />
+</p>
 
-Template para criar CLIs modernas com duas experiências sobre a mesma regra de
-negócio: comandos oclif para automação e uma interface interativa construída
-com React, Ink e componentes termcn.
+<h1 align="center">Build a CLI people want to use.</h1>
 
-> Este repositório é um ponto de partida. Antes de publicar um projeto criado a
-> partir dele, troque o nome `my-cli`, o binário `mycli` e os metadados indicados
-> no [checklist de personalização](docs/using-the-template.md).
+<p align="center">
+  A production-minded TypeScript template that gives automation and humans the experience each one
+  deserves: fast oclif commands, a polished Ink interface, and one shared application core.
+</p>
 
-## O que o template demonstra
+<p align="center">
+  <img alt="Node.js 24.15 or newer" src="https://img.shields.io/badge/Node.js-%3E%3D24.15-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white" />
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-ESM-3178C6?style=flat-square&logo=typescript&logoColor=white" />
+  <img alt="oclif 5" src="https://img.shields.io/badge/oclif-5-982BFF?style=flat-square" />
+  <img alt="Ink 7" src="https://img.shields.io/badge/Ink-7-24C8DB?style=flat-square&logo=react&logoColor=white" />
+  <img alt="MIT license" src="https://img.shields.io/badge/License-MIT-F4B942?style=flat-square" />
+</p>
 
-- Node.js 24.15+, TypeScript 7 ESM e npm 12.
-- oclif v5 com comandos hierárquicos separados por espaço.
-- React 19, Ink 7 e componentes termcn/Ink copiados para o projeto.
-- Uma camada de casos de uso compartilhada por CLI textual e TUI.
-- Saída humana, streaming de processos e JSON estável para automação.
-- Execução segura de scripts já declarados em `package.json`, sem shell livre.
-- Testes unitários, de comandos, de TUI e do tarball npm real.
-- CI multiplataforma em Linux, macOS e Windows.
+<p align="center">
+  <a href="#quick-start"><strong>Get started</strong></a>
+  ·
+  <a href="docs/architecture.md">Explore the architecture</a>
+  ·
+  <a href="docs/adding-a-command.md">Add a command</a>
+</p>
 
-## Requisitos
+> [!NOTE]
+> This repository is a template. Before publishing a project created from it, replace `my-cli`,
+> `mycli`, and the placeholder metadata using the
+> [customization checklist](docs/using-the-template.md).
+
+## One core. Two exceptional interfaces.
+
+Most CLI projects eventually choose between a script-friendly command surface and a rich
+interactive experience. This template starts with both—and keeps them consistent by design.
+
+| For automation                | For humans                             |
+| ----------------------------- | -------------------------------------- |
+| Hierarchical oclif commands   | Responsive React and Ink TUI           |
+| Stable, ANSI-free JSON        | Searchable lists and command palette   |
+| Predictable exit codes        | Live progress, logs, and cancellation  |
+| Stream-safe process execution | Keyboard-first navigation              |
+| Package-level smoke tests     | Alternate-screen lifecycle and cleanup |
+
+The command layer and the TUI are delivery adapters. They call the same use cases, consume the same
+typed events, and never duplicate business rules.
+
+```mermaid
+flowchart LR
+  automation["Scripts, CI, and agents"] --> commands["oclif commands"]
+  people["Developers at a terminal"] --> tui["Ink TUI"]
+  commands --> core["Shared use cases"]
+  tui --> core
+  core --> ports["Typed ports"]
+  ports --> system["Workspace, npm, Git, and processes"]
+  core --> results["Results and events"]
+  results --> commands
+  results --> tui
+```
+
+## Why start here?
+
+### Ship product behavior, not CLI plumbing
+
+Command discovery, help, JSON serialization, TTY checks, signal handling, terminal restoration,
+responsive layouts, and package verification are already represented by working examples.
+
+### Keep every interface honest
+
+Core modules cannot import oclif, React, Ink, Execa, or Node.js APIs. ESLint enforces the important
+dependency boundaries so architectural drift is caught during development.
+
+### Automate with confidence
+
+JSON mode emits one clean document without ANSI or progress noise. Expected failures map to stable
+messages and exit codes, while task execution avoids arbitrary shell strings.
+
+### Test what users actually install
+
+The package smoke test builds a real npm tarball, inspects its contents, installs it in a temporary
+workspace, and executes the packaged binary.
+
+## Quick start
+
+### Requirements
 
 - Node.js `>=24.15`
-- npm `12.0.2`, declarado em `package.json#packageManager`
+- npm `12.0.2`, declared in `package.json#packageManager`
 - Git
-- Um terminal com TTY para usar o modo interativo
+- A TTY-capable terminal for interactive mode
 
-## Começando
-
-Crie um repositório com **Use this template**, clone-o e execute:
+### Run the template
 
 ```bash
 npm install
@@ -36,8 +102,7 @@ npm run build
 ./bin/run.js --help
 ```
 
-Durante o desenvolvimento, o entrypoint TypeScript pode ser executado sem um
-build prévio:
+Use the TypeScript development entrypoint while iterating:
 
 ```bash
 ./bin/dev.js
@@ -45,65 +110,82 @@ build prévio:
 ./bin/dev.js task list
 ```
 
-No Windows, use os scripts npm equivalentes:
+On Windows, use the npm scripts:
 
 ```powershell
 npm run dev -- doctor
 npm run dev -- task list
 ```
 
-## Comandos de exemplo
+## See it in action
 
-| Comando                                 | Resultado                                                            |
-| --------------------------------------- | -------------------------------------------------------------------- |
-| `mycli` ou `mycli ui`                   | Abre a tela inicial quando há TTY; sem TTY, mostra o help e termina. |
-| `mycli task list`                       | Lista os scripts do `package.json` do diretório atual.               |
-| `mycli task list --interactive`         | Abre a lista filtrável de tarefas.                                   |
-| `mycli task run <script>`               | Executa um script existente com saída em streaming.                  |
-| `mycli task run <script> --interactive` | Confirma e acompanha a tarefa em uma tela com logs e resumo.         |
-| `mycli doctor`                          | Verifica Node, npm, Git, TTY, workspace e `package.json`.            |
-| `mycli doctor --interactive`            | Abre o diagnóstico visual e permite repeti-lo.                       |
-| `mycli ... --json`                      | Produz um único documento JSON, sem ANSI.                            |
+| Command                                 | What it demonstrates                                         |
+| --------------------------------------- | ------------------------------------------------------------ |
+| `mycli` or `mycli ui`                   | Opens the TUI with a TTY; otherwise prints help and exits    |
+| `mycli task list`                       | Lists scripts from the current workspace                     |
+| `mycli task list --interactive`         | Opens a searchable task browser                              |
+| `mycli task run <script>`               | Streams a declared npm script safely                         |
+| `mycli task run <script> --interactive` | Confirms, runs, reports progress, and supports cancellation  |
+| `mycli doctor`                          | Checks Node.js, npm, Git, TTY, workspace, and `package.json` |
+| `mycli doctor --interactive`            | Opens a visual diagnostic report that can be refreshed       |
+| `mycli ... --json`                      | Emits a single machine-readable JSON document without ANSI   |
 
-`--interactive` exige TTY e não pode ser combinado com `--json`. `task run`
-aceita apenas um nome presente em `package.json#scripts`; argumentos livres e
-strings de shell não fazem parte do MVP.
+`--interactive` requires stdin and stdout to be attached to a TTY and cannot be combined with
+`--json`. `task run` accepts only names already declared in `package.json#scripts`; arbitrary shell
+commands are intentionally outside the template's scope.
 
-Os códigos de saída são `0` para sucesso, `2` para uso inválido ou modo
-interativo sem TTY, `130` para cancelamento e, quando uma tarefa falha, o código
-de saída do processo executado.
+Exit codes are part of the contract:
 
-## Tela interativa
+- `0` for success;
+- `2` for invalid usage or interactive mode without a TTY;
+- `130` for cancellation;
+- the child process exit code when a task fails.
 
-A TUI usa uma única raiz Ink em alternate screen. Ela inclui:
+## A real terminal application
 
-- Home com contexto do workspace, ações rápidas e execuções da sessão.
-- Lista pesquisável de scripts, com detalhes e ação de execução.
-- Execução com confirmação, spinner, duração, logs e cancelamento.
-- Doctor em formato de tabela, com recomendações e nova verificação.
-- Paleta de comandos em `/`, ajuda em `?` e navegação por setas, Tab, Enter e
-  Esc.
+The TUI runs as a single Ink root in the alternate screen and includes:
 
-Durante uma tarefa, `Ctrl+C` cancela o subprocesso. Quando a aplicação está
-ociosa, `Ctrl+C` encerra a TUI. A interface se adapta para uma ou duas colunas
-de acordo com a largura do terminal.
+- a workspace-aware home screen with quick actions and session history;
+- searchable task discovery and task details;
+- confirmation, progress, duration, logs, and cancellation;
+- environment diagnostics with recommendations and refresh;
+- a `/` command palette, `?` help, and keyboard-first navigation;
+- one- and two-column layouts based on terminal width.
 
-## Arquitetura
+While a task is running, `Ctrl+C` cancels its process. While idle, `Ctrl+C` exits the application.
+Cleanup restores raw mode, the cursor, and the screen buffer.
+
+## Architecture that scales with the product
 
 ```text
-comando oclif ─┐
-               ├──> caso de uso ──> eventos/resultado ──> texto ou JSON
-tela Ink ──────┘                         └───────────────> estado da TUI
+src/
+  commands/              thin oclif delivery adapters
+  features/
+    <feature>/
+      core/              framework-independent use cases and contracts
+      adapters/          concrete infrastructure
+      cli/               presenters, DTOs, and error mapping
+      tui/               feature screens and state controllers
+  runtime/               composition root, signals, TTY, and Ink mounting
+  tui/                   global shell, routing, components, and keymap
 ```
 
-Comandos e telas são adaptadores. Leitura de workspace, diagnóstico e execução
-de tarefas ficam em casos de uso que não importam oclif, React ou Ink. Assim, a
-mesma funcionalidade pode crescer nas duas interfaces sem duplicação.
+Local source imports use the `@/*` alias and end in `.js` for Node ESM compatibility. The build
+emits TypeScript and then rewrites aliases to valid relative imports with `tsc-alias`.
 
-Veja a [arquitetura e a função de cada pasta](docs/architecture.md) e o guia
-[adicionando um comando e sua tela](docs/adding-a-command.md).
+Read [Architecture](docs/architecture.md) for dependency rules, runtime flows, and package
+boundaries.
 
-## Desenvolvimento
+## Create your next command with Codex
+
+This repository includes a project-local `$create-command` skill. Ask Codex to use it and it will
+collect the command ID, description, aliases, arguments, flags, and examples before generating a
+compilable oclif scaffold with a visible `console.log` placeholder.
+
+For a production feature shared by CLI and TUI, follow
+[Adding a command and screen](docs/adding-a-command.md).
+
+## Development workflow
 
 ```bash
 npm run format:check
@@ -115,32 +197,39 @@ npm run manifest
 npm run smoke:package
 ```
 
-`npm run check` executa as verificações locais agregadas definidas pelo
-template. O smoke gera um `.tgz`, valida seu conteúdo, instala-o em uma pasta
-temporária e chama o binário instalado; portanto, ele detecta problemas que uma
-execução direta de `src/` não encontraria.
+`npm run check` runs the main local quality gate. The package smoke test is intentionally separate
+because it builds and installs the real tarball.
 
-## termcn
+## Own the UI source
 
-termcn segue o modelo shadcn: o código dos componentes é copiado para
-`src/tui/components/ui` e passa a pertencer ao projeto. Não há dependência do
-registry em runtime ou na CI. Para adicionar ou atualizar componentes, siga
-[a convenção termcn deste template](docs/termcn.md).
+termcn follows the shadcn model: component source is copied into the repository and becomes part of
+the product. There is no registry dependency at runtime or in CI. Add, customize, and review
+components like any other application code.
 
-## Usando como GitHub Template
+See [Using termcn](docs/termcn.md) for registry aliases, vendored source conventions, themes, and
+Node ESM requirements.
 
-O pacote começa com `"private": true` para evitar publicação acidental. O fluxo
-completo de criação, renome, validação e preparação para publicação está em
-[usando o template](docs/using-the-template.md). A opção **Template repository**
-deve ser habilitada manualmente nas configurações deste repositório.
+## Make the template yours
 
-## Documentação
+The package starts with `"private": true` to prevent accidental publishing. The
+[template guide](docs/using-the-template.md) covers:
 
-- [Arquitetura](docs/architecture.md)
-- [Adicionar um comando e uma tela](docs/adding-a-command.md)
-- [Componentes termcn](docs/termcn.md)
-- [Usar e personalizar o template](docs/using-the-template.md)
+- creating a repository from the GitHub template;
+- renaming the package and binary safely;
+- validating interactive, JSON, and packaged behavior;
+- reviewing the tarball before publication.
 
-## Licença
+## Documentation
 
-[MIT](LICENSE)
+- [Architecture](docs/architecture.md)
+- [Adding a command and screen](docs/adding-a-command.md)
+- [Using termcn](docs/termcn.md)
+- [Using and customizing the template](docs/using-the-template.md)
+
+## Ready to build?
+
+Start with the domain behavior your CLI should own. Expose it through a focused oclif command,
+bring it to life in Ink when interaction adds value, and let the shared core keep both experiences
+aligned.
+
+Licensed under the [MIT License](LICENSE).

@@ -1,29 +1,46 @@
-# Arquitetura
+# Architecture
 
-## Princípio central
+## Design goal
 
-O template separa intenção, execução e apresentação. Um comando oclif e uma
-tela Ink chamam o mesmo caso de uso; nenhum deles chama o outro.
+This template separates **intent**, **execution**, and **presentation**.
 
-```text
-┌──────────────────┐       ┌──────────────────┐
-│ comandos oclif   │──────▶│                  │
-└──────────────────┘       │  casos de uso    │──▶ portas ──▶ infraestrutura
-                           │                  │
-┌──────────────────┐       └────────┬─────────┘
-│ telas Ink        │───────────────▶│
-└──────────────────┘                ▼
-                          eventos e resultados tipados
-                           │                      │
-                           ▼                      ▼
-                    presenters CLI          estado da TUI
+An oclif command and an Ink screen can expose the same capability, but neither one owns the
+business rule and neither one calls the other. Both invoke a framework-independent use case and
+translate its typed result or events for their audience.
+
+```mermaid
+flowchart LR
+  subgraph delivery["Delivery"]
+    command["oclif command"]
+    screen["Ink screen"]
+  end
+
+  subgraph application["Application core"]
+    usecase["Use case"]
+    ports["Typed ports"]
+  end
+
+  subgraph infrastructure["Infrastructure"]
+    workspace["Workspace reader"]
+    process["Task runner"]
+    environment["Environment checks"]
+  end
+
+  command --> usecase
+  screen --> usecase
+  usecase --> ports
+  ports --> workspace
+  ports --> process
+  ports --> environment
+  usecase --> result["Typed results and events"]
+  result --> command
+  result --> screen
 ```
 
-Essa divisão evita acoplamento entre o ciclo de vida do terminal e a regra de
-negócio. Em particular, serviços não escrevem em `console`, não usam
-`this.log()` e não renderizam spinners. Eles retornam dados ou publicam eventos.
+This split keeps terminal lifecycle concerns out of domain behavior. Services do not call
+`console.log` or `this.log()` and do not render spinners. They return data or publish events.
 
-## Estrutura do projeto
+## Project map
 
 ```text
 bin/
@@ -81,163 +98,270 @@ test/
   tui/
   fixtures/
   package/
+
 scripts/
 docs/
 .github/workflows/
 ```
 
+## Dependency direction
+
+Dependencies point inward toward contracts and use cases. ESLint encodes the important boundaries
+so invalid imports fail the regular quality gate.
+
+```mermaid
+flowchart TB
+  commands["src/commands"]
+  shell["src/tui"]
+  runtime["src/runtime"]
+
+  featureCli["feature/cli"]
+  featureTui["feature/tui"]
+  adapters["feature/adapters"]
+  core["feature/core"]
+
+  commands --> featureCli
+  commands --> runtime
+  shell --> featureTui
+  shell --> runtime
+  runtime --> core
+  runtime --> adapters
+  featureCli --> core
+  featureTui --> core
+  adapters --> core
+
+  tasksCore["tasks/core"] --> workspaceCore["workspace/core"]
+  doctorCore["doctor/core"] --> workspaceCore
+
+  classDef protected fill:#111827,stroke:#22d3ee,color:#f8fafc,stroke-width:2px
+  class core,workspaceCore,tasksCore,doctorCore protected
+```
+
+The rules behind this graph are:
+
+- `core` depends only on explicitly allowed core contracts;
+- feature `adapters`, `cli`, and `tui` depend inward and never import another feature's
+  implementation;
+- imports within a feature are relative;
+- consumers outside a feature use its root `index.ts` to access the public core API;
+- `workspace` is foundational and may be consumed by `tasks` and `doctor`;
+- `tasks` and `doctor` remain independent from each other;
+- only the composition root knows concrete implementations across layers.
+
+## Directory responsibilities
+
 ### `bin/`
 
-Entrypoints executáveis e mínimos. `dev.js` inicializa oclif em modo de
-desenvolvimento com suporte a TypeScript/TSX; `run.js` carrega os comandos
-compilados. O manifesto gerado fica fora do Git para que o modo de
-desenvolvimento sempre redescubra `src/commands`; `dev.js` remove esse artefato
-descartável antes de iniciar. Os entrypoints não contêm regra de negócio.
+Minimal executable entrypoints:
+
+- `dev.js` starts oclif from TypeScript/TSX sources during development;
+- `run.js` loads compiled commands from `dist/`.
+
+The generated manifest is ignored by Git so development always rediscovers source commands.
+`dev.js` removes that disposable artifact before startup. Entrypoints contain no business logic.
 
 ### `src/commands/`
 
-Classes oclif finas. Cada classe declara argumentos, flags, help e exemplos,
-valida combinações específicas da CLI e delega para um caso de uso ou para o
-runtime interativo. A estrutura de arquivos determina os tópicos: por exemplo,
-`commands/task/list.ts` é descoberto como `task list` porque o separador do
-projeto é um espaço.
+Thin oclif classes declare arguments, flags, descriptions, examples, and help. They parse input,
+validate CLI-specific combinations, resolve application services, invoke a use case or the
+interactive runtime, present the result, and set the exit code.
+
+The file path determines the command ID. With `"topicSeparator": " "`,
+`src/commands/task/list.ts` is discovered as `task list`.
+
+Commands are not registered manually and never invoke another command class to share behavior.
 
 ### `src/runtime/`
 
-Fronteira de inicialização: compõe dependências, detecta TTY, instala e remove
-handlers de sinais e monta a raiz Ink. É também onde o terminal entra e sai do
-alternate screen. `waitUntilExit()` deve ser aguardado e todo cleanup fica em
-um bloco `finally`. `services.ts` define a única fachada consumida pelos
-comandos e pela TUI; somente o container conhece implementações concretas.
+The runtime is the composition and lifecycle boundary. It:
+
+- builds the application service facade;
+- wires ports to concrete adapters;
+- detects TTY capabilities;
+- installs and removes signal handlers;
+- mounts the single Ink root;
+- enters and leaves the alternate screen.
+
+The caller always awaits `waitUntilExit()`, and terminal cleanup belongs in a `finally` block.
+`services.ts` defines the facade consumed by commands and the TUI; only the container knows all
+concrete implementations.
 
 ### `src/cli/`
 
-Infraestrutura compartilhada da interface textual: `BaseCommand`, serialização
-JSON sem ANSI, sanitização de texto, tabelas e o contrato de mapeamento de erros.
-Presenters e mapeadores específicos permanecem na feature que os utiliza.
+Shared textual delivery infrastructure lives here:
+
+- `BaseCommand`;
+- JSON serialization without ANSI;
+- terminal-text sanitization;
+- reusable table formatting;
+- the central CLI error contract.
+
+Feature-specific presenters, output DTOs, and error mappers stay inside that feature's `cli/`
+folder.
 
 ### `src/features/`
 
-Módulos verticais organizados em quatro fronteiras internas:
+Features are vertical modules with up to four internal boundaries:
 
-- `core`: tipos, portas e casos de uso independentes de framework;
-- `adapters`: implementações concretas das portas da feature;
-- `cli`: presenters, DTOs e tradução de erros específicos;
-- `tui`: telas e controladores de estado específicos.
+| Boundary   | Responsibility                                            |
+| ---------- | --------------------------------------------------------- |
+| `core`     | Types, ports, errors, and framework-independent use cases |
+| `adapters` | Concrete implementations of the feature's ports           |
+| `cli`      | Human presenters, JSON DTOs, and CLI error translation    |
+| `tui`      | Feature screens and state controllers                     |
 
-As features atuais são:
+The current features are:
 
-- `workspace`: encontra e lê o `package.json` do diretório atual.
-- `tasks`: lista scripts e executa uma tarefa, emitindo eventos tipados.
-- `doctor`: agrega verificações do ambiente em diagnósticos tipados.
+- `workspace`: discovers and reads the current workspace's `package.json`;
+- `tasks`: lists declared npm scripts and runs a task while publishing typed events;
+- `doctor`: aggregates environment checks into a typed diagnostic report.
 
-Os contratos principais são `Workspace`, `Task`, `TaskEvent`, `TaskResult` e
-`DiagnosticCheck`. Arquivos de `core` não importam oclif, Ink, React, Execa nem
-uma fronteira externa da própria feature. `workspace` é a dependência
-fundamental compartilhada por `tasks` e `doctor`; estas duas features não se
-conhecem.
+The main public contracts include `Workspace`, `Task`, `TaskEvent`, `TaskResult`, and
+`DiagnosticCheck`. Core code does not import oclif, Ink, React, Execa, Node.js APIs, or its own
+outer delivery and infrastructure layers.
 
-O executor em `tasks/adapters` chama `npm` com programa e argumentos separados,
-`shell: false`, diretório de trabalho explícito e `AbortSignal`.
+The task adapter invokes npm with a program and argument array, `shell: false`, an explicit working
+directory, and an `AbortSignal`.
 
 ### `src/tui/`
 
-Contém o shell de uma única aplicação Ink:
+This folder owns the shell of one Ink application:
 
-- `screens`: telas globais `home` e `help`; telas de tarefas e doctor ficam nas
-  respectivas features.
-- `components/ui`: fontes copiadas do registry termcn e versionadas no projeto.
-- `components/app`: composições que pertencem ao domínio deste template.
-- `hooks`: primitives vendorizadas pelo termcn.
-- `routes.ts`, `router.tsx` e `keymap.ts`: contratos de navegação, composição de
-  telas e atalhos globais.
+- `screens/` contains global screens such as Home and Help;
+- feature-specific screens remain in `src/features/<feature>/tui/`;
+- `components/ui/` contains vendored termcn primitives;
+- `components/app/` contains product-specific compositions;
+- `hooks/` contains vendored termcn hooks;
+- `routes.ts`, `router.tsx`, and `keymap.ts` define navigation and global keyboard behavior.
 
-### `src/components/`, `src/lib/` e `src/providers/`
+### `src/components/`, `src/lib/`, and `src/providers/`
 
-Código de suporte explícito dos componentes termcn vendorizados. `components`
-mantém tipos compartilhados, `lib` concentra estilo, texto, símbolos e temas de
-terminal, e `providers` contém o `ThemeProvider`. Os aliases do
-`components.json` direcionam cada tipo de artefato para sua pasta real; imports
-locais usam o alias raiz `@/*` para acessar estes helpers sem caminhos relativos
-profundos.
+These folders support the vendored termcn source. Shared component types live in `components`;
+styles, symbols, text utilities, and terminal themes live in `lib`; the explicit `ThemeProvider`
+lives in `providers`.
+
+`components.json` maps registry artifacts to their real folders. Local imports use the `@/*` alias
+instead of deep relative paths.
 
 ### `test/`
 
-- `features`: core, adapters, CLI e TUI organizados pela mesma feature do fonte.
-- `cli`: helpers compartilhados da interface textual.
-- `commands`: comportamento oclif, streams, JSON e códigos de saída.
-- `tui`: frames e entrada de teclado com `ink-testing-library`.
-- `fixtures`: workspaces determinísticos.
-- `package`: verificações auxiliares do artefato publicado.
+| Folder          | Coverage                                                     |
+| --------------- | ------------------------------------------------------------ |
+| `test/features` | Feature core, adapters, CLI presenters, and feature TUI      |
+| `test/cli`      | Shared textual delivery helpers                              |
+| `test/commands` | oclif behavior, streams, JSON, and exit codes                |
+| `test/tui`      | Global frames, routing, keyboard input, and terminal runtime |
+| `test/fixtures` | Deterministic workspaces                                     |
+| `test/package`  | Helpers for validating the published artifact                |
 
-### `scripts/`, `docs/` e `.github/workflows/`
+### `scripts/`, `docs/`, and `.github/workflows/`
 
-`scripts` contém automações de manutenção que não pertencem ao runtime, como o
-smoke do tarball. `docs` registra decisões e fluxos de extensão. O workflow de
-CI executa as mesmas verificações públicas disponíveis nos scripts npm.
+`scripts` contains maintenance automation outside the runtime, including the tarball smoke test.
+`docs` captures extension workflows and architectural decisions. CI calls the same public npm
+scripts available locally.
 
-## TypeScript e manifesto
+## Runtime flows
 
-`tsconfig.json` cobre apenas `src`, com `rootDir: src`, `outDir: dist`,
-`module: NodeNext` e `moduleResolution: NodeNext`. `tsconfig.test.json` amplia o
-escopo para testes sem alterar o contrato do build. `tsconfig.build.json` emite
-JavaScript e declarações; em seguida, `tsc-alias` converte `@/*` em imports
-relativos com extensão `.js` válidos no Node ESM.
+### Running a task
 
-O build e o typecheck usam o compilador nativo TypeScript 7. O
-`typescript-eslint` ainda depende da API JavaScript do compilador, por isso o
-pacote de compatibilidade TypeScript 6 fica instalado lado a lado conforme a
-estratégia oficial de migração. Todo o toolchain e suas dependências transitivas
-são validados em Node `>=24.15.0`.
+```mermaid
+sequenceDiagram
+  actor User
+  participant Command as task run command
+  participant Services as Application services
+  participant Workspace as Workspace reader
+  participant UseCase as Run-task use case
+  participant Runner as Execa task runner
 
-O npm 12 bloqueia scripts de instalação transitivos por padrão. A allowlist
-`package.json#allowScripts` libera somente `esbuild` e `fsevents`, necessários
-para transformação e file watching no toolchain atual.
+  User->>Command: mycli task run build
+  Command->>Services: readWorkspace(cwd)
+  Services->>Workspace: read package.json
+  Workspace-->>Services: Workspace
+  Services-->>Command: Workspace
+  Command->>Services: runTask(input)
+  Services->>UseCase: execute(input)
+  UseCase->>Runner: npm run -- build
+  Note over Runner: shell: false + AbortSignal
+  Runner-->>UseCase: started/output/completed events
+  UseCase-->>Command: TaskResult
+  alt Human output
+    Command-->>User: streamed output + summary
+  else JSON output
+    Command-->>User: one ANSI-free JSON document
+  end
+```
 
-`oclif.manifest.json` é gerado depois do build, faz parte do tarball e é
-removido pelo `postpack`. Ele não é versionado: ao criar, renomear ou remover
-comandos, execute `npm run build && npm run manifest` para validar a descoberta
-localmente; `prepack` repete o processo antes de publicar.
+The use case validates the requested name against `package.json#scripts` before creating a process.
+The `--` separator prevents script names beginning with a hyphen from becoming npm options. Output
+events can stream without limit while retained stdout and stderr remain bounded in memory.
 
-## Fluxos principais
+A single `AbortSignal` connects `Ctrl+C` to the child process. Cancellation returns `130` and the
+runtime restores terminal state during teardown.
 
-### Listagem de tarefas
+### Interactive lifecycle
 
-1. O adaptador informa o diretório atual ao leitor de workspace.
-2. O adapter de workspace lê `package.json#scripts`.
-3. O caso de uso de tasks transforma e ordena as tarefas.
-4. O comando usa o presenter humano ou retorna o DTO JSON; a tela atualiza a
-   tabela.
+```mermaid
+stateDiagram-v2
+  [*] --> CapabilityCheck
+  CapabilityCheck --> Help: no TTY
+  CapabilityCheck --> Mounting: interactive TTY
+  Mounting --> Idle: Ink root mounted
+  Idle --> Running: start operation
+  Running --> Idle: completed or failed
+  Running --> Cancelling: Ctrl+C
+  Cancelling --> Idle: process stopped
+  Idle --> Exiting: Esc or Ctrl+C
+  Exiting --> Restored: cleanup
+  Help --> [*]
+  Restored --> [*]
+```
 
-Sem `package.json`, a saída textual informa como corrigir o workspace, a saída
-JSON mantém seu contrato e a TUI mostra um empty state em vez de quebrar.
+The TUI is mounted once with `alternateScreen: true`. While an operation is active, `Ctrl+C` means
+cancel; while idle, it means exit. Screens convert use-case events into state instead of writing to
+stdout during rendering.
 
-### Execução de tarefa
+## TypeScript, aliases, and the manifest
 
-1. O caso de uso valida o nome contra a lista do workspace; comandos arbitrários são
-   rejeitados antes de criar um processo.
-2. O runner inicia `npm run -- <nome>` sem shell; `--` impede que nomes de
-   scripts iniciados por hífen sejam interpretados como opções do npm, e então
-   publica `started`.
-3. stdout/stderr viram eventos `output`; o adaptador decide como exibi-los.
-4. O encerramento produz `completed`, `failed` ou `cancelled` e um `TaskResult`.
-5. A saída retida em memória é limitada; streaming não precisa ser limitado.
+`tsconfig.json` covers `src` with `rootDir: src`, `outDir: dist`, strict mode, and NodeNext module
+resolution. `tsconfig.test.json` expands the typecheck scope for tests without changing the build
+contract. `tsconfig.build.json` emits JavaScript and declaration files.
 
-Um único `AbortSignal` liga `Ctrl+C` ao subprocesso. Cancelamento retorna `130`
-e a desmontagem restaura raw mode, cursor e alternate screen.
+```mermaid
+flowchart LR
+  source["TypeScript source<br/>imports use @/* and .js"] --> tsc["TypeScript build"]
+  tsc --> emitted["JavaScript<br/>aliases still present"]
+  emitted --> alias["tsc-alias"]
+  alias --> runnable["Node ESM<br/>relative .js imports"]
+  runnable --> manifest["oclif manifest"]
+  manifest --> tarball["npm tarball"]
+```
 
-## Limites de dependência
+The build uses native TypeScript 7. `typescript-eslint` still consumes the TypeScript JavaScript API,
+so the compatibility TypeScript 6 package is installed alongside it. The toolchain and transitive
+dependencies are validated on Node.js `>=24.15.0`.
 
-- `core` depende apenas de outros contratos de core explicitamente permitidos.
-- `adapters`, `cli` e `tui` de uma feature dependem para dentro e não importam
-  implementações de outras features.
-- imports internos usam caminhos relativos; consumidores externos usam o
-  `index.ts` da feature para acessar seu core.
-- `commands`, `runtime` e o shell da TUI compõem as features.
-- `commands` não importa telas individuais; pede ao runtime uma rota inicial.
-- `tui` não executa classes oclif.
-- Apenas o composition root conhece implementações concretas de todas as
-  camadas.
+npm 12 blocks transitive install scripts by default. `package.json#allowScripts` permits only
+`esbuild` and `fsevents`, which are required by the transformation and watch toolchain.
 
-Esses limites devem ser preservados à medida que novas telas e comandos forem
-adicionados.
+`oclif.manifest.json` is generated after the production build, included in the tarball, and removed
+by `postpack`. It is not versioned. After adding, renaming, or removing commands, run:
+
+```bash
+npm run build
+npm run manifest
+```
+
+`prepack` repeats both steps before publication.
+
+## Architectural checklist
+
+Before merging a new capability, confirm that:
+
+- the business rule exists once, inside a feature core;
+- CLI and TUI depend on the same public use case;
+- expected errors have stable typed representations;
+- infrastructure implements a port and is wired only by the container;
+- JSON output is data-only and ANSI-free;
+- long-running operations publish events and support cancellation;
+- commands and screens contain presentation and lifecycle logic only;
+- the relevant dependency boundaries still pass ESLint.

@@ -1,23 +1,47 @@
-# Adicionando um comando e sua tela
+# Adding a command and screen
 
-Use este fluxo quando uma funcionalidade precisar existir tanto como comando
-automatizável quanto como tela interativa. Se a funcionalidade for puramente
-textual, omita a etapa da tela, mas preserve o caso de uso separado.
+Use this guide when a capability needs an automation-friendly command, an interactive screen, or
+both. The architecture keeps delivery choices separate from business behavior, so start by deciding
+which level of change you need.
 
-## 1. Modele o caso de uso
+## Choose the right path
 
-Crie uma pasta em `src/features/<feature>/core/` com:
+```mermaid
+flowchart TD
+  request["New CLI capability"] --> scaffold{"Scaffold only?"}
+  scaffold -->|Yes| skill["Use $create-command"]
+  skill --> placeholder["Create one command file<br/>with console.log placeholder"]
+  scaffold -->|No| core["Model the use case"]
+  core --> command["Add thin oclif command"]
+  command --> interactive{"Interactive value?"}
+  interactive -->|No| tests["Test command and feature"]
+  interactive -->|Yes| screen["Add route and Ink screen"]
+  screen --> tests
+  tests --> docs["Update public documentation"]
+  docs --> verify["Run quality and package checks"]
+```
 
-- tipos de entrada, resultado e eventos;
-- portas para efeitos externos;
-- uma função ou classe que coordene a operação.
+For a metadata-only command scaffold, use the repository's `$create-command` Codex skill. It asks
+for the ID, description, aliases, arguments, flags, and examples, then creates a compilable file in
+`src/commands/` whose only behavior is a visible `console.log` placeholder.
 
-O caso de uso não deve importar oclif, React, Ink ou uma implementação de
-infraestrutura. Erros esperados devem ter representação estável, para que CLI
-e TUI possam apresentá-los de maneiras diferentes.
+For real product behavior, follow the workflow below. If the feature is textual only, skip the TUI
+step but keep the use case independent from oclif.
 
-Para operações longas, publique eventos discriminados em vez de escrever no
-terminal:
+## 1. Model the use case
+
+Create `src/features/<feature>/core/` with:
+
+- input, result, and event types;
+- ports for external effects;
+- a function or class that coordinates the operation;
+- stable error types for expected failures.
+
+The core must not import oclif, React, Ink, Execa, Node.js APIs, or concrete infrastructure.
+Commands and screens need to present the same failure differently, so expected errors must remain
+typed and transport-neutral.
+
+For long-running work, publish discriminated events instead of writing to the terminal:
 
 ```ts
 export type ExampleEvent =
@@ -28,120 +52,159 @@ export type ExampleEvent =
   | {type: 'cancelled'}
 ```
 
-Exponha somente esses contratos em `src/features/<feature>/index.ts`. Imports
-internos à feature são relativos; outros módulos consomem esse entrypoint.
+Expose only public core contracts from `src/features/<feature>/index.ts`. Imports inside the feature
+remain relative; consumers outside the feature use that root entrypoint.
 
-Implemente cada porta concreta em `src/features/<feature>/adapters/` e
-registre-a no container. Nenhum adapter instancia outro adapter: somente o
-composition root conhece implementações concretas.
+Implement each concrete port in `src/features/<feature>/adapters/` and register it in the runtime
+container. An adapter never instantiates another adapter; only the composition root knows concrete
+implementations.
 
-## 2. Crie os presenters
+```mermaid
+flowchart LR
+  input["Typed input"] --> usecase["Feature use case"]
+  usecase --> port["Port"]
+  adapter["Concrete adapter"] -. implements .-> port
+  usecase --> events["Events"]
+  usecase --> result["Typed result"]
+  events --> cli["CLI presenter"]
+  events --> tui["TUI state"]
+  result --> cli
+  result --> tui
+```
 
-Adicione a transformação humana e os DTOs necessários em
-`src/features/<feature>/cli/`. Use `src/cli/` para tabela, sanitização e
-serialização compartilhadas. O contrato JSON precisa ser composto apenas por
-dados e deve permanecer sem ANSI, logs, mensagens de progresso ou spinner.
+## 2. Define CLI presentation
 
-Não crie wrappers JSON de identidade. Quando a forma pública diferir do
-resultado do caso de uso, crie um mapper tipado e faça o comando retornar esse
-DTO.
+Add human presentation, error mapping, and output DTOs to `src/features/<feature>/cli/`. Use
+`src/cli/` only for shared tables, sanitization, serialization, and base error behavior.
 
-Decida antes de implementar:
+Decide the public contract before implementing:
 
-- forma do resultado de sucesso;
-- forma do erro esperado;
-- código de saída;
-- quais eventos são transmitidos no modo textual.
+- the success shape;
+- the expected error shape;
+- exit codes;
+- which events stream in human mode;
+- whether the command supports JSON;
+- whether an interactive route adds real value.
 
-No modo JSON, acumule o resultado necessário e escreva exatamente um documento
-ao final. Não misture streaming textual com JSON.
+JSON is a public API. It must contain only data and remain free from ANSI, progress messages,
+spinners, and textual logs. Emit exactly one document at the end.
 
-## 3. Adicione a classe oclif
+Do not create identity wrappers around results. When the public JSON shape differs from the use-case
+result, create a typed mapper and return its DTO.
 
-Crie `src/commands/<topic>/<name>.ts`. A classe deve fazer somente o seguinte:
+## 3. Add the oclif class
 
-1. declarar argumentos, flags, descrição e exemplos;
-2. chamar `this.parse()`;
-3. rejeitar `--json` junto de `--interactive`;
-4. exigir TTY antes de abrir uma tela;
-5. obter dependências do composition root;
-6. chamar o caso de uso ou o runtime da TUI;
-7. apresentar o resultado e definir o código de saída.
+Create `src/commands/<topic>/<name>.ts`. With `"topicSeparator": " "`, the path
+`src/commands/project/create.ts` becomes `mycli project create`.
 
-Com `"topicSeparator": " "`, o caminho
-`src/commands/project/create.ts` resulta em `mycli project create`. Não registre
-o comando manualmente e não chame outra classe oclif para reaproveitar lógica.
-O entrypoint de desenvolvimento redescobre os fontes porque o manifesto gerado
-fica no `.gitignore` e é removido antes da inicialização; o empacotamento o
-recria a partir do build de produção.
+```mermaid
+flowchart LR
+  file["src/commands/project/create.ts"] --> discovery["oclif pattern discovery"]
+  discovery --> id["project create"]
+  id --> help["mycli project create --help"]
+```
 
-Mantenha o comportamento não interativo como padrão. `--interactive` deve
-apenas escolher outro adaptador para o mesmo caso de uso. Se o comando aceitar
-`--json`, cubra explicitamente a incompatibilidade entre as flags.
+Do not register the command manually. Development rediscovers source files because the generated
+manifest is ignored and removed before startup. Packaging recreates the manifest from the production
+build.
 
-## 4. Adicione a rota e a tela
+The class should do only the following:
 
-Inclua uma rota em `ScreenRoute` e conecte-a em `src/tui/router.tsx`. A tela e
-seus controladores em `src/features/<feature>/tui/` devem:
+1. declare aliases, arguments, flags, description, examples, and summary;
+2. call `this.parse()`;
+3. reject `--json` together with `--interactive` when both are supported;
+4. require a TTY before mounting a screen;
+5. obtain dependencies from the composition root;
+6. call the use case or interactive runtime;
+7. present the result and set the exit code.
 
-- receber serviços e estado por props/contexto, sem importá-los de módulos
-  globais mutáveis;
-- iniciar efeitos em hooks e cancelar trabalho pendente ao desmontar;
-- representar `idle`, `loading`, `success`, `failure` e `cancelled` quando forem
-  estados possíveis;
-- usar componentes de `components/ui` e composições de `components/app`;
-- caber em layout de uma coluna e aproveitar duas colunas quando houver espaço;
-- fornecer uma saída por `Esc` e respeitar o tratamento global de `Ctrl+C`.
+Use `BaseCommand` when the command participates in the project's JSON and central error contracts.
+Keep non-interactive behavior as the default; `--interactive` selects another delivery adapter for
+the same use case.
 
-Registre a ação na Home e na command palette. Atualize `keymap.ts` somente para
-atalhos globais; atalhos locais permanecem próximos à tela.
+Do not call another oclif class to reuse behavior.
 
-Durante a renderização Ink, não use `console.log`, `this.log()` ou spinners do
-oclif. Eventos do caso de uso devem virar estado visual.
+## 4. Add the route and screen
 
-## 5. Teste os três níveis
+If interaction improves the experience, add a route to `ScreenRoute` and connect it in
+`src/tui/router.tsx`. Place feature-specific screens and controllers in
+`src/features/<feature>/tui/`.
 
-### Feature
+The screen should:
 
-- sucesso com portas fake;
-- validação e falha esperada;
-- sequência dos eventos;
-- cancelamento e liberação de recursos.
-- presenters, DTOs e adapters específicos.
+- receive services and state through props or context, not mutable global modules;
+- start effects in hooks and cancel pending work when unmounted;
+- represent `idle`, `loading`, `success`, `failure`, and `cancelled` when applicable;
+- use primitives from `components/ui` and product compositions from `components/app`;
+- work in one column and use two columns when enough width is available;
+- provide an `Esc` path and respect global `Ctrl+C` behavior.
 
-### Comando
+Register the action on Home and in the command palette. Change `keymap.ts` only for global shortcuts;
+local shortcuts stay near the screen that owns them.
 
-- help, argumentos e flags;
-- saída humana e JSON parseável;
-- JSON sem ANSI;
-- `--json --interactive` retorna uso inválido;
-- `--interactive` sem TTY retorna código `2`;
-- código de saída do processo é preservado.
+During Ink rendering, never use `console.log`, `this.log()`, or oclif spinners. Convert use-case
+events into visual state.
 
-### TUI da feature
+## 5. Test every changed boundary
 
-- rota e frame inicial;
-- navegação e atalhos;
-- loading e frame final;
-- confirmação e cancelamento;
-- terminal estreito e largo quando o layout mudar.
+### Feature tests
 
-Organize esses testes em `test/features/<feature>/`. Testes globais de comando,
-shell, rotas e empacotamento permanecem em suas pastas de integração.
+Cover:
 
-Use largura fixa, `NO_MOTION=1` e `NO_UNICODE=1` nos testes visuais. Evite
-snapshots de tempo decorrido ou animação; prefira as informações semânticas do
-último frame.
+- success with fake ports;
+- validation and expected failures;
+- event order;
+- cancellation and resource release;
+- feature-specific adapters, presenters, DTOs, and error mappers.
 
-## 6. Atualize a documentação pública
+### Command tests
 
-Inclua o comando na tabela do README e, se ele introduzir um contrato ou uma
-nova dependência entre camadas, registre a decisão em `docs/architecture.md`.
-Finalize executando:
+Cover:
+
+- help, positional arguments, and flags;
+- human output;
+- parseable JSON without ANSI;
+- `--json --interactive` returning invalid usage;
+- `--interactive` without a TTY returning exit code `2`;
+- preservation of child process exit codes.
+
+### TUI tests
+
+Cover:
+
+- route and initial frame;
+- navigation and shortcuts;
+- loading and final frames;
+- confirmation and cancellation;
+- narrow and wide layouts when behavior changes with terminal width.
+
+Organize feature tests under `test/features/<feature>/`. Global command, shell, routing, and package
+tests remain in their integration folders.
+
+Use a fixed width, `NO_MOTION=1`, and `NO_UNICODE=1` for visual tests. Avoid snapshots of elapsed
+time or animation frames; assert semantic content from the final frame.
+
+## 6. Update the public story
+
+Add the command to the README command table. If it introduces a public JSON contract, document its
+shape and exit behavior. If it changes contracts or dependencies between layers, update
+`docs/architecture.md`.
+
+## 7. Validate the result
+
+Run the main quality gate:
 
 ```bash
 npm run check
+```
+
+For command discovery and the installable artifact, also run:
+
+```bash
 npm run build
 npm run manifest
 npm run smoke:package
 ```
+
+Before handing off, execute the command in development with safe values for every required argument
+and flag, then confirm both its output and exit code.

@@ -1,13 +1,33 @@
-# termcn neste template
+# Using termcn in this template
 
-termcn fornece componentes de terminal para Ink e OpenTUI seguindo o modelo
-shadcn. Este projeto usa somente a variante **Ink**: o registry copia os fontes
-para o repositório e esses arquivos passam a ser mantidos junto da aplicação.
-O runtime não consulta `termcn.dev`.
+termcn provides terminal UI components for Ink and OpenTUI using the shadcn model: the registry
+copies source into your project, giving you full ownership and no runtime lock-in.
 
-## Configuração do registry
+This template uses the **Ink variant only**. Components become versioned application source; the
+runtime and CI never contact the termcn registry.
 
-`components.json` registra o namespace:
+## How the registry fits the project
+
+```mermaid
+flowchart LR
+  registry["termcn registry"] --> shadcn["shadcn CLI"]
+  config["components.json aliases"] --> shadcn
+  shadcn --> primitives["src/tui/components/ui"]
+  shadcn --> hooks["src/tui/hooks"]
+  shadcn --> support["src/components + src/lib + src/providers"]
+  primitives --> product["Product TUI"]
+  hooks --> product
+  support --> product
+  product --> build["TypeScript + tsc-alias"]
+  build --> package["Self-contained npm package"]
+```
+
+After generation, the registry is no longer part of the execution path. Review and customize the
+copied files like any other code in the repository.
+
+## Registry configuration
+
+`components.json` registers the termcn namespace:
 
 ```json
 {
@@ -17,105 +37,151 @@ O runtime não consulta `termcn.dev`.
 }
 ```
 
-Os aliases do mesmo arquivo apontam cada artefato para sua pasta real:
+The aliases in the same file route each artifact to its real destination:
 
-- componentes compartilhados: `src/components`;
-- primitivas de UI: `src/tui/components/ui`;
-- hooks: `src/tui/hooks`;
-- bibliotecas e utilitários: `src/lib`;
-- alias TypeScript: `@/*` resolve a partir de `src/*`.
+| Artifact                       | Destination             |
+| ------------------------------ | ----------------------- |
+| Shared component types         | `src/components`        |
+| UI primitives                  | `src/tui/components/ui` |
+| Hooks                          | `src/tui/hooks`         |
+| Libraries, symbols, and themes | `src/lib`               |
+| Theme providers                | `src/providers`         |
+| TypeScript imports             | `@/*` → `src/*`         |
 
-O `ThemeProvider` explícito fica em `src/providers`. Tipos, helpers, temas e
-providers também são código vendorizado e usam o mesmo alias raiz `@/*`.
+The repository's actual `components.json` is the source of truth. Do not replace its aliases with
+generic paths copied from a web project.
 
-O arquivo real do projeto é a fonte de verdade; não substitua seus aliases por
-paths genéricos copiados de um projeto web.
+## Add an Ink component
 
-## Adicionando um componente
-
-Consulte o componente no catálogo e use sempre o caminho da variante Ink:
+Always use the Ink registry path:
 
 ```bash
 npx shadcn@latest add @termcn/ink/spinner
 ```
 
-Depois da geração:
+termcn also publishes an `@termcn/opentui/*` namespace, but it targets a different renderer and does
+not belong in this template.
 
-1. revise os arquivos adicionados e seus imports;
-2. mantenha-os em `src/tui/components/ui`;
-3. mova composições específicas do produto para `components/app`;
-4. confirme que dependências usadas em runtime estão em `dependencies`;
-5. execute typecheck, testes, build e smoke do pacote;
-6. faça commit dos fontes gerados.
+After generation:
 
-Adicionar um componente é uma alteração de código, não uma instalação de tema
-remoto em runtime. Uma atualização futura deve ser revisada como qualquer diff
-local, pois customizações do projeto pertencem ao projeto.
+1. review every new file and import;
+2. keep primitives under `src/tui/components/ui`;
+3. move product-specific compositions to `src/tui/components/app`;
+4. confirm runtime packages are listed in `dependencies`, not only `devDependencies`;
+5. normalize local imports so they end in `.js`;
+6. run typecheck, tests, build, and the package smoke test;
+7. commit the generated source.
 
-## Aliases e ESM publicado
+Adding a component changes application code. A later registry update must be reviewed as a normal
+diff because local customizations belong to the product.
 
-Os fontes importam, por exemplo:
+## Node ESM and aliases
+
+Generated source may import a primitive like this:
 
 ```tsx
 import {Spinner} from '@/tui/components/ui/spinner.js'
 ```
 
-Node ESM não entende `@/` por conta própria. O projeto usa `module: NodeNext` e
-`moduleResolution: NodeNext`, por isso todo import local — inclusive os aliases
-copiados do registry — termina em `.js`; o TypeScript o associa ao respectivo
-fonte `.ts`/`.tsx`. Após adicionar ou atualizar um componente termcn, normalize
-eventuais imports locais sem extensão antes do typecheck. O build executa
-`tsc-alias` depois de `tsc` para reescrever aliases como caminhos relativos
-válidos no JavaScript executado pelo Node.
+Node ESM does not resolve `@/` by itself. The project uses `module: NodeNext` and
+`moduleResolution: NodeNext`, so every local source import—including aliases copied from the
+registry—ends in `.js`. TypeScript maps that specifier back to the corresponding `.ts` or `.tsx`
+source.
 
-```text
-TypeScript + @/* ──tsc──> JavaScript + @/* ──tsc-alias──> JavaScript relativo
+The production build resolves the remaining alias:
+
+```mermaid
+flowchart LR
+  source["TypeScript<br/>@/* + .js"] --> tsc["tsc"]
+  tsc --> emitted["JavaScript<br/>@/* + .js"]
+  emitted --> alias["tsc-alias"]
+  alias --> node["Runnable Node ESM<br/>relative .js imports"]
 ```
 
-Não remova a etapa de alias do build. `npm run smoke:package` procura imports
-`@/...` residuais dentro do tarball instalado e falha se encontrar algum.
+Do not remove `tsc-alias` from the build. `npm run smoke:package` scans installed JavaScript and
+fails if an unresolved `@/...` import reaches the tarball.
 
-## Tema e componentes locais
+## Theme and component ownership
 
-`ThemeProvider` fica na raiz da TUI. Tokens semânticos devem ser usados em vez
-de cores repetidas nas telas, permitindo trocar o tema sem reescrever cada
-componente.
+The explicit `ThemeProvider` lives at the TUI root. Screens should use semantic tokens instead of
+repeating raw colors, allowing a product-wide theme change without rewriting individual components.
 
-Os componentes mínimos do template são:
+The template's building blocks include:
 
-- `AppShell` para cabeçalho, conteúdo e atalhos;
-- `CommandPalette` para navegação por `/`;
-- `Menu`/`Select` e `Table` para listas navegáveis;
-- `Spinner` e `LogPanel` (composição local sobre o `Log` do registry) para
-  operações longas;
-- `Confirm`, `StatusMessage` e `KeyboardShortcuts`;
-- `ThemeProvider` para tokens e capacidades do terminal.
+- `AppShell` for header, content, and shortcut regions;
+- `CommandPalette` for `/` navigation;
+- `Menu`, `Select`, and `Table` for navigable data;
+- `Spinner` and the product-level `LogPanel` for long-running work;
+- `Confirm`, `StatusMessage`, and `KeyboardShortcuts`;
+- `ThemeProvider` for tokens and terminal capabilities.
 
-Nem todos precisam vir diretamente do registry. Componentes de produto podem
-compor primitivas termcn e permanecer em `components/app`.
+Not every component needs to come directly from the registry. Product compositions can combine
+termcn primitives and remain in `components/app`.
 
-## Capacidades do terminal
+## Terminal capabilities
 
-A apresentação deve respeitar:
+Presentation must respect:
 
-- `NO_COLOR`: remove cores ANSI;
-- `NO_UNICODE`: usa símbolos ASCII;
-- `NO_MOTION`: desativa animação e frames dependentes de tempo;
-- `CI`: escolhe uma saída determinística e conservadora;
-- ausência de TTY: nunca tenta iniciar a TUI.
+- `NO_COLOR`: disable ANSI colors;
+- `NO_UNICODE`: use ASCII-safe symbols;
+- `NO_MOTION`: disable animation and time-dependent frames;
+- `CI`: prefer deterministic, conservative output;
+- missing TTY capability: never mount the interactive application.
 
-Use `process.stdout.columns` ou o hook de tamanho do Ink para responsividade.
-Teste pelo menos 80×24 e 120×40 manualmente; testes automatizados devem fixar
-largura e desabilitar movimento/Unicode.
+Use `process.stdout.columns` or an Ink terminal-size hook for responsive layouts. Manually verify at
+least 80×24 and 120×40. Automated visual tests should fix width and disable motion and Unicode.
 
-## Particularidades do Ink 7
+## Ink lifecycle
 
-- Requer Node moderno; este template fixa Node `>=24.15` e React 19.
-- A aplicação é montada uma vez com `render(..., {alternateScreen: true})`.
-- O chamador aguarda `waitUntilExit()` antes de devolver o controle ao oclif.
-- Sinais e desmontagem devem sempre restaurar raw mode, cursor e screen buffer.
-- `useInput` coordena teclado; uma tarefa ativa recebe `Ctrl+C` como
-  cancelamento, enquanto o estado ocioso o interpreta como saída.
+Ink's `render()` returns an instance that owns the application lifecycle. This template mounts one
+root with `alternateScreen: true` and waits for `waitUntilExit()` before returning control to oclif.
 
-Referências: [termcn registry](https://www.termcn.dev/docs/registry),
-[termcn](https://www.termcn.dev/) e [Ink](https://github.com/vadimdemedes/ink).
+```mermaid
+sequenceDiagram
+  participant Command as oclif command
+  participant Runtime as TUI runtime
+  participant Ink as Ink instance
+  participant Screen as Active screen
+
+  Command->>Runtime: renderTui(options)
+  Runtime->>Ink: render(App, alternateScreen: true)
+  Ink->>Screen: mount
+  Screen->>Screen: useInput handles keys
+  Command->>Ink: await waitUntilExit()
+  Screen-->>Ink: exit or cancellation completes
+  Ink-->>Runtime: application unmounted
+  Runtime->>Runtime: remove signals and restore terminal
+  Runtime-->>Command: exit code
+```
+
+`useInput` coordinates keyboard handling and automatically works with raw stdin input. A running
+task interprets `Ctrl+C` as cancellation; an idle application interprets it as exit. `Esc` provides
+a local navigation or exit path.
+
+Signal handlers, raw mode, cursor visibility, and the alternate screen must always be restored in a
+`finally` block.
+
+## Validation checklist
+
+After adding or updating termcn source, run:
+
+```bash
+npm run typecheck
+npm test
+npm run build
+npm run smoke:package
+```
+
+Also confirm that:
+
+- generated files landed in the configured directories;
+- no OpenTUI-only component entered the Ink application;
+- local imports use `.js` specifiers;
+- the packaged build contains no unresolved aliases;
+- visual tests remain deterministic with motion and Unicode disabled.
+
+## References
+
+- [termcn registry documentation](https://www.termcn.dev/docs/registry)
+- [termcn](https://www.termcn.dev/)
+- [Ink](https://github.com/vadimdemedes/ink)

@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Criar comando'
+  short_description: 'Gera novos comandos com perguntas guiadas'
+  default_prompt: 'Use $create-command para criar um novo comando neste CLI.'

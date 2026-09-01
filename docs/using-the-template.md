@@ -1,38 +1,70 @@
-# Usando o GitHub Template
+# Using and customizing the template
 
-## Criar um projeto
+This repository is designed to become a new product, not to remain a demo forever. Use this guide
+to create a repository, replace every placeholder consistently, validate both interfaces, and keep
+publication disabled until ownership is ready.
 
-1. No repositório original, confirme que **Settings → General → Template
-   repository** está habilitado.
-2. Selecione **Use this template → Create a new repository**.
-3. Escolha proprietário, nome e visibilidade do novo repositório.
-4. Clone o repositório criado e instale dependências com `npm install`.
+## Template journey
 
-Histórico de commits, branches, secrets, environments, regras de proteção e
-configurações de publicação não são copiados pelo GitHub Template. Configure-os
-novamente quando forem necessários.
+```mermaid
+flowchart LR
+  template["Use this template"] --> clone["Clone the new repository"]
+  clone --> install["Install dependencies"]
+  install --> rename["Rename package, binary, and product"]
+  rename --> validate["Validate CLI, TUI, and tarball"]
+  validate --> private["Keep private while preparing"]
+  private --> publish["Publish deliberately"]
+```
 
-## Checklist obrigatório de personalização
+## Create a project
 
-Substitua os placeholders de forma consistente:
+1. In the source repository, confirm that **Settings → General → Template repository** is enabled.
+2. Select **Use this template → Create a new repository**.
+3. Choose the owner, repository name, and visibility.
+4. Clone the new repository.
+5. Install dependencies with `npm install`.
 
-- [ ] `package.json#name`: troque `my-cli` pelo nome npm desejado.
-- [ ] `package.json#bin`: troque a chave `mycli` pelo comando executável.
-- [ ] `package.json#description`, `author`, `homepage`, `bugs` e `repository`.
-- [ ] `package.json#oclif#bin` e referências ao binário em help/exemplos, caso
-      essa propriedade esteja presente.
-- [ ] Título, exemplos, links e texto introdutório do README.
-- [ ] Nome/descrição mostrados no cabeçalho e no tema da TUI.
-- [ ] Identificadores residuais encontrados com
-      `rg -n "my-cli|mycli|cli-template"`.
-- [ ] Titular e ano do `LICENSE`, se o novo projeto não for manter os atuais.
-- [ ] URL do registry termcn em `components.json` somente se usar outro
-      registry; normalmente ela não muda.
+GitHub does not copy commit history, branches, secrets, environments, protection rules, or publishing
+configuration from a template. Recreate those settings when the new project needs them.
 
-Depois das alterações, rode `npm install` para atualizar o lockfile. Não edite
-`package-lock.json` manualmente.
+## Required customization checklist
 
-## Validar o novo projeto
+Replace the placeholders as one coordinated change:
+
+- [ ] Change `package.json#name` from `my-cli` to the intended npm package name.
+- [ ] Change the `package.json#bin` key from `mycli` to the executable name.
+- [ ] Update `description`, `author`, `homepage`, `bugs`, and `repository`.
+- [ ] Update `package.json#oclif#bin` and any help or example references to the binary.
+- [ ] Replace the README title, positioning, examples, links, badges, and introductory copy.
+- [ ] Update the product name and description shown by the TUI header and theme.
+- [ ] Review remaining placeholders with:
+
+  ```bash
+  rg -n "my-cli|mycli|cli-template"
+  ```
+
+- [ ] Update the copyright holder and year in `LICENSE` when appropriate.
+- [ ] Change the registry URL in `components.json` only if the project uses a different registry;
+      most projects should keep the existing termcn URL.
+
+After changing package metadata, run `npm install` so npm updates the lockfile. Never edit
+`package-lock.json` manually.
+
+## Validate the customized product
+
+The verification path moves from fast static checks to the artifact users will install.
+
+```mermaid
+flowchart LR
+  format["format:check"] --> lint["lint"]
+  lint --> types["typecheck"]
+  types --> tests["tests"]
+  tests --> build["build"]
+  build --> manifest["oclif manifest"]
+  manifest --> smoke["installable tarball smoke test"]
+```
+
+Run:
 
 ```bash
 npm run format:check
@@ -44,7 +76,12 @@ npm run manifest
 npm run smoke:package
 ```
 
-Também valide a TUI manualmente em terminais 80×24 e 120×40:
+`npm run check` aggregates the main local checks through manifest generation. The package smoke
+test remains explicit because it builds, inspects, installs, and executes the tarball.
+
+## Validate both interfaces manually
+
+Test the TUI in at least an 80×24 and a 120×40 terminal:
 
 ```bash
 ./bin/run.js
@@ -52,40 +89,64 @@ Também valide a TUI manualmente em terminais 80×24 e 120×40:
 ./bin/run.js doctor --interactive
 ```
 
-Confirme os cenários abaixo antes do primeiro merge:
+Confirm every item below before the first merge:
 
-- o comando raiz abre a TUI em um TTY;
-- o comando raiz mostra help e termina quando stdout/stdin não são TTY;
-- `doctor --json` e `task list --json` produzem JSON parseável e sem ANSI;
-- `--interactive --json` falha com código `2`;
-- cancelar uma tarefa não deixa processo órfão nem o terminal alterado;
-- o `.tgz` contém build, bins, manifesto, README e licença, mas não contém
-  fontes, testes, documentação interna ou segredos;
-- o JavaScript empacotado não contém imports `@/...`.
+- the root command opens the TUI when stdin and stdout are TTYs;
+- the root command prints help and exits when no TTY is available;
+- `doctor --json` and `task list --json` produce parseable JSON without ANSI;
+- `--interactive --json` fails with exit code `2`;
+- cancelling a task leaves no orphan process and restores the terminal;
+- the tarball contains the build, bins, manifest, README, and license;
+- the tarball excludes source files, tests, internal docs, and secrets;
+- packaged JavaScript contains no unresolved `@/...` imports.
 
-A CI executará essas verificações em Node 24 no Linux, macOS e Windows.
+## Understand what the smoke test protects
 
-## Segurança antes de publicar
+```mermaid
+sequenceDiagram
+  participant Dev as Developer
+  participant npm as npm pack
+  participant Check as Smoke script
+  participant Temp as Temporary workspace
+  participant CLI as Installed binary
 
-O template usa `"private": true`. Mantenha essa proteção enquanto nome,
-metadados e ownership não estiverem finalizados. Quando o projeto estiver
-pronto para publicação:
+  Dev->>Check: npm run smoke:package
+  Check->>npm: build + manifest + pack
+  npm-->>Check: package tarball
+  Check->>Check: inspect included files and imports
+  Check->>Temp: install tarball
+  Temp->>CLI: run packaged command
+  CLI-->>Check: output and exit code
+  Check-->>Dev: pass or actionable failure
+```
 
-1. confirme que o nome está disponível no registry npm;
-2. reveja o conteúdo com `npm pack --dry-run`;
-3. remova `"private": true` conscientemente;
-4. defina `publishConfig` apropriado, especialmente para pacotes com escopo;
-5. configure autenticação/proveniência no repositório do novo projeto.
+Direct execution from `src/` cannot reveal missing package files, broken bins, stale manifests, or
+unresolved aliases in emitted JavaScript. The smoke test exists to catch those packaging-only
+failures.
 
-Não há workflow de release ou publicação automática no MVP. Adicioná-lo exige
-uma decisão explícita do projeto consumidor; nunca copie tokens para o
-repositório.
+## Publish deliberately
 
-## Próximos passos recomendados
+The template starts with `"private": true`. Keep that guard while the package name, metadata,
+ownership, and release process are unfinished.
 
-- Remova comandos de exemplo que não façam sentido para o produto.
-- Troque tokens do tema antes de customizar cada componente isoladamente.
-- Mantenha classes oclif e telas como adaptadores dos casos de uso.
-- Ao adicionar um fluxo novo, siga
-  [adicionando um comando e sua tela](adding-a-command.md).
-- Atualize o README sempre que o contrato JSON ou os códigos de saída mudarem.
+When the project is ready:
+
+1. confirm that the package name is available in the intended npm registry;
+2. inspect the artifact with `npm pack --dry-run`;
+3. review every file npm plans to publish;
+4. remove `"private": true` consciously;
+5. define an appropriate `publishConfig`, especially for scoped packages;
+6. configure registry authentication and provenance outside the repository.
+
+The template does not ship a release or automatic-publishing workflow. Adding one is an explicit
+product decision. Never commit registry tokens, provenance credentials, or other secrets.
+
+## Recommended next steps
+
+- Remove example commands that do not belong in the product.
+- Replace theme tokens before customizing individual components.
+- Keep oclif classes and Ink screens as adapters over shared use cases.
+- Use the repository's `$create-command` Codex skill for new command scaffolds.
+- Follow [Adding a command and screen](adding-a-command.md) for production behavior.
+- Update the README whenever public JSON or exit codes change.
+- Record new dependency rules and cross-feature contracts in [Architecture](architecture.md).
