@@ -1,0 +1,89 @@
+import {Args, Flags} from '@oclif/core'
+
+import {resolveTask, type TaskEvent} from '@/features/tasks/index.js'
+import {presentTaskResultHuman} from '@/presenters/human/index.js'
+import {BaseCommand, interactiveFlag} from '@/runtime/base-command.js'
+import {createApplicationServices} from '@/runtime/container.js'
+import {renderTui} from '@/runtime/render-tui.js'
+import {createSignalController} from '@/runtime/signals.js'
+
+function streamTaskOutput(event: TaskEvent): void {
+  if (event.type !== 'output') return
+  const target = event.stream === 'stderr' ? process.stderr : process.stdout
+  target.write(event.chunk)
+}
+
+export default class TaskRun extends BaseCommand {
+  static override args = {
+    script: Args.string({
+      description: 'Exact script name from package.json.',
+      required: true,
+    }),
+  }
+  static override description = 'Run one npm script declared by the current workspace.'
+  static override examples = [
+    '<%= config.bin %> task run build',
+    '<%= config.bin %> task run test --interactive',
+    '<%= config.bin %> task run lint --json',
+  ]
+  static override flags = {
+    interactive: interactiveFlag,
+    'output-limit': Flags.integer({
+      default: 65_536,
+      description: 'Maximum captured characters per output stream.',
+      min: 0,
+    }),
+  }
+  static override summary = 'Run a workspace task'
+
+  async run() {
+    const {args, flags} = await this.parse(TaskRun)
+    this.assertOutputMode(flags.interactive)
+    const services = createApplicationServices()
+
+    try {
+      if (flags.interactive) {
+        const workspace = await services.readWorkspace(process.cwd())
+        const tasks = await services.listTasks(workspace)
+        resolveTask(tasks, args.script)
+
+        let taskExitCode = 0
+        const exitCode = await renderTui({
+          cwd: process.cwd(),
+          initialRoute: 'task-run',
+          initialTask: args.script,
+          name: this.config.bin,
+          onTaskCompleted: (result) => {
+            taskExitCode = result.exitCode
+          },
+          services,
+          version: this.config.version,
+        })
+        const finalExitCode = exitCode === 0 ? taskExitCode : exitCode
+        if (finalExitCode !== 0) process.exitCode = finalExitCode
+        return
+      }
+
+      const workspace = await services.readWorkspace(process.cwd())
+      const signals = createSignalController()
+
+      try {
+        const result = await services.runTask({
+          ...(this.jsonEnabled() ? {} : {onEvent: streamTaskOutput}),
+          outputLimit: flags['output-limit'],
+          signal: signals.signal,
+          taskName: args.script,
+          workspace,
+        })
+
+        if (!this.jsonEnabled()) this.log(`\n${presentTaskResultHuman(result)}`)
+        if (result.exitCode !== 0) process.exitCode = result.exitCode
+        return result
+      } finally {
+        signals.dispose()
+      }
+    } catch (error: unknown) {
+      this.fail(error)
+    }
+  }
+}
