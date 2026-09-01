@@ -133,7 +133,7 @@ export const Select = <T = string,>({
         </Text>
       )}
       {visibleOptions.map(({ option: opt, index: idx }) => {
-        const isActive = idx === activeIndex;
+        const isActive = isFocused && idx === activeIndex;
         const isSelected =
           selectedValue !== undefined && opt.value === selectedValue;
 

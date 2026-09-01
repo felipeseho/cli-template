@@ -274,6 +274,7 @@ export function useInteraction(
     id,
     isActive: scope ? false : enabled,
   });
+  const nativeFocusById = nativeFocus.focus;
   const isFocused = scope
     ? scope.active && scope.isTopmost && scope.focusedId === id
     : nativeFocus.isFocused;
@@ -292,6 +293,17 @@ export function useInteraction(
     }
   }, [id, isFocused, scope, stdout]);
 
+  // Ink only applies autoFocus while registering a control. An overlay may
+  // mount the next control inactive for one render, so focus it again when it
+  // becomes active instead of leaving the application without a focus owner.
+  React.useEffect(() => {
+    if (scope || !autoFocus || !enabled) {
+      return;
+    }
+
+    nativeFocusById(id);
+  }, [autoFocus, enabled, id, nativeFocusById, scope]);
+
   useInput(
     (input, key) => {
       if (key.eventType === "release") {
@@ -299,7 +311,7 @@ export function useInteraction(
       }
       onInput?.(input, key);
     },
-    { isActive: enabled && (scope ? isFocused : true) && Boolean(onInput) }
+    { isActive: enabled && isFocused && Boolean(onInput) }
   );
 
   const focus = React.useCallback(() => {
@@ -310,9 +322,9 @@ export function useInteraction(
     if (scope) {
       scope.focus(id);
     } else {
-      nativeFocus.focus(id);
+      nativeFocusById(id);
     }
-  }, [enabled, id, nativeFocus, scope]);
+  }, [enabled, id, nativeFocusById, scope]);
 
   return { focus, id, isFocused };
 }

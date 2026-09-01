@@ -15,20 +15,22 @@ export interface LogEntry {
 }
 
 export interface LogProps extends InteractionProps {
-  entries: LogEntry[];
+  entries: readonly LogEntry[];
   height?: number;
   showTimestamp?: boolean;
   filter?: string;
   follow?: boolean;
+  onStateChange?: (state: LogState) => void;
+  showFooter?: boolean;
   "aria-label"?: string;
 }
 
-const LEVEL_COLORS: Record<LogLevel, string> = {
-  debug: "gray",
-  error: "red",
-  info: "cyan",
-  warn: "yellow",
-};
+export interface LogState {
+  end: number;
+  follow: boolean;
+  start: number;
+  total: number;
+}
 
 const LEVEL_LABELS: Record<LogLevel, string> = {
   debug: "DBG",
@@ -50,6 +52,8 @@ export const Log = ({
   showTimestamp = true,
   filter,
   follow: followProp = false,
+  onStateChange,
+  showFooter = true,
   id,
   autoFocus,
   isActive,
@@ -78,22 +82,31 @@ export const Log = ({
   useEffect(() => {
     if (follow) {
       setScrollOffset(maxOffset);
+    } else {
+      setScrollOffset((offset) => Math.max(0, Math.min(maxOffset, offset)));
     }
   }, [follow, maxOffset]);
 
+  const start = filtered.length === 0 ? 0 : scrollOffset + 1;
+  const end = Math.min(scrollOffset + height, filtered.length);
+
+  useEffect(() => {
+    onStateChange?.({ end, follow, start, total: filtered.length });
+  }, [end, filtered.length, follow, onStateChange, start]);
+
   const { isFocused } = useInteraction(
     (input, key) => {
-      if (input === "j" || key.downArrow) {
+      if (input.toLocaleLowerCase() === "j" || key.downArrow) {
         setScrollOffset((o) => Math.min(maxOffset, o + 1));
         if (follow) {
           setFollow(false);
         }
-      } else if (input === "k" || key.upArrow) {
+      } else if (input.toLocaleLowerCase() === "k" || key.upArrow) {
         setScrollOffset((o) => Math.max(0, o - 1));
         if (follow) {
           setFollow(false);
         }
-      } else if (input === "f") {
+      } else if (input.toLocaleLowerCase() === "f") {
         setFollow((f) => !f);
       } else if (key.home) {
         setScrollOffset(0);
@@ -102,8 +115,10 @@ export const Log = ({
         setScrollOffset(maxOffset);
       } else if (key.pageUp) {
         setScrollOffset((offset) => Math.max(0, offset - height));
+        setFollow(false);
       } else if (key.pageDown) {
         setScrollOffset((offset) => Math.min(maxOffset, offset + height));
+        setFollow(false);
       }
     },
     { autoFocus, disabled, id, isActive }
@@ -125,13 +140,28 @@ export const Log = ({
       </Text>
       <Box flexDirection="column" height={height}>
         {visible.map((entry, i) => {
-          const levelColor = LEVEL_COLORS[entry.level];
+          const levelColor = (() => {
+            switch (entry.level) {
+              case "debug": {
+                return theme.colors.mutedForeground;
+              }
+              case "error": {
+                return theme.colors.error;
+              }
+              case "warn": {
+                return theme.colors.warning;
+              }
+              default: {
+                return theme.colors.info;
+              }
+            }
+          })();
           const levelLabel = LEVEL_LABELS[entry.level];
           let messageColor: string;
           if (entry.level === "error") {
-            messageColor = "red";
+            messageColor = theme.colors.error;
           } else if (entry.level === "warn") {
-            messageColor = "yellow";
+            messageColor = theme.colors.warning;
           } else {
             messageColor = theme.colors.foreground;
           }
@@ -158,27 +188,29 @@ export const Log = ({
           );
         })}
       </Box>
-      <Box aria-hidden gap={2} marginTop={0}>
-        <Text color={theme.colors.mutedForeground} dimColor>
-          {scrollOffset + 1}
-          {unicode ? "–" : "-"}
-          {Math.min(scrollOffset + height, filtered.length)}/{filtered.length}
-        </Text>
-        <Text
-          color={follow ? theme.colors.success : theme.colors.mutedForeground}
-          dimColor
-        >
-          {follow ? (unicode ? "↓ follow" : "down follow") : "f follow"}
-        </Text>
-        <Text color={theme.colors.mutedForeground} dimColor>
-          j/k scroll
-        </Text>
-        {filter && (
+      {showFooter && (
+        <Box aria-hidden gap={2} marginTop={0}>
           <Text color={theme.colors.mutedForeground} dimColor>
-            filter: {filter}
+            {start}
+            {unicode ? "–" : "-"}
+            {end}/{filtered.length}
           </Text>
-        )}
-      </Box>
+          <Text
+            color={follow ? theme.colors.success : theme.colors.mutedForeground}
+            dimColor
+          >
+            {follow ? (unicode ? "↓ follow" : "down follow") : "f follow"}
+          </Text>
+          <Text color={theme.colors.mutedForeground} dimColor>
+            j/k scroll
+          </Text>
+          {filter && (
+            <Text color={theme.colors.mutedForeground} dimColor>
+              filter: {filter}
+            </Text>
+          )}
+        </Box>
+      )}
     </Box>
   );
 };

@@ -6,11 +6,140 @@ import type {Task, TaskResult} from '@/features/tasks/index.js'
 import type {Workspace} from '@/features/workspace/index.js'
 import type {ApplicationServices} from '@/runtime/services.js'
 import {App} from '@/tui/app.js'
-import {createServices, flushTui, resizeTui, succeededResult, tasks, workspace} from './support.js'
+import {UnicodeContext} from '@/tui/hooks/use-unicode.js'
+import {
+  createServices,
+  diagnostics,
+  flushTui,
+  resizeTui,
+  succeededResult,
+  tasks,
+  workspace,
+} from './support.js'
 
 afterEach(cleanup)
 
 describe('interactive application', () => {
+  it('renders the complete dashboard at 120x40 with a custom description', async () => {
+    const instance = render(
+      <UnicodeContext.Provider value={{unicode: true}}>
+        <App
+          cwd={workspace.path}
+          description="Operações do time de plataforma."
+          name="mycli"
+          services={createServices()}
+          stdinIsTTY
+          stdoutIsTTY
+          version="1.2.3"
+        />
+      </UnicodeContext.Provider>,
+    )
+
+    resizeTui(instance, {columns: 120, rows: 40})
+    await vi.waitFor(() => {
+      expect(instance.lastFrame()).toContain('Operações do time de plataforma.')
+      expect(instance.lastFrame()).toContain('Execuções nesta sessão')
+      const resizedLines = (instance.lastFrame() ?? '').split('\n')
+      expect(resizedLines).toHaveLength(40)
+      expect(Math.max(...resizedLines.map((line) => stringWidth(line)))).toBeLessThanOrEqual(120)
+    })
+
+    const frame = instance.lastFrame() ?? ''
+    const lines = frame.split('\n')
+    expect(lines).toHaveLength(40)
+    expect(Math.max(...lines.map((line) => stringWidth(line)))).toBeLessThanOrEqual(120)
+    for (const metric of ['Workspace', 'Scripts', 'Saúde', 'Sessão']) {
+      expect(frame).toContain(metric)
+    }
+    expect(frame).toContain('não verificado')
+    expect(frame).toContain('◆ MYCLI v1.2.3')
+    expect(frame).toContain('╭')
+    expect(frame).toContain('Dashboard')
+
+    instance.unmount()
+  })
+
+  it('shows honest Home states while loading and for a workspace without scripts', async () => {
+    let resolveWorkspace!: (value: Workspace) => void
+    const workspacePromise = new Promise<Workspace>((resolve) => {
+      resolveWorkspace = resolve
+    })
+    const instance = render(
+      <App
+        cwd={workspace.path}
+        services={createServices({
+          listTasks: () => [],
+          readWorkspace: () => workspacePromise,
+        })}
+        stdinIsTTY
+        stdoutIsTTY
+      />,
+    )
+
+    await vi.waitFor(() => {
+      expect(instance.lastFrame()).toContain('Workspace: carregando')
+      expect(instance.lastFrame()).toContain('Scripts: -')
+      expect(instance.lastFrame()).toContain('Saúde: não verificado')
+    })
+
+    resolveWorkspace({...workspace, scripts: {}})
+    await vi.waitFor(() => {
+      expect(instance.lastFrame()).toContain('Workspace: fixture-project')
+      expect(instance.lastFrame()).toContain('Scripts: 0')
+      expect(instance.lastFrame()).toContain('Executar uma tarefa')
+      expect(instance.lastFrame()).toContain('nenhuma execução')
+    })
+
+    instance.unmount()
+  })
+
+  it('keeps Doctor available when Home cannot load a workspace', async () => {
+    const instance = render(
+      <App
+        cwd="/fixture/missing"
+        services={createServices({
+          readWorkspace: () => Promise.reject(new Error('package.json ausente')),
+        })}
+        stdinIsTTY
+        stdoutIsTTY
+      />,
+    )
+
+    await vi.waitFor(() => {
+      expect(instance.lastFrame()).toContain('Workspace indisponível')
+      expect(instance.lastFrame()).toContain('Workspace: não detectado')
+      expect(instance.lastFrame()).toContain('Verificar ambiente')
+      expect(instance.lastFrame()).not.toContain('Explorar tarefas')
+    })
+
+    instance.unmount()
+  })
+
+  it('keeps the last diagnostic report in the Home session summary', async () => {
+    const onDiagnosticsCompleted = vi.fn()
+    const instance = render(
+      <App
+        cwd={workspace.path}
+        initialRoute="doctor"
+        onDiagnosticsCompleted={onDiagnosticsCompleted}
+        services={createServices()}
+        stdinIsTTY
+        stdoutIsTTY
+      />,
+    )
+
+    resizeTui(instance, {columns: 120, rows: 40})
+    await vi.waitFor(() => expect(onDiagnosticsCompleted).toHaveBeenCalledWith(diagnostics))
+    instance.stdin.write('\u001B')
+    await vi.waitFor(() => {
+      expect(instance.lastFrame()).toContain('Dashboard')
+      expect(instance.lastFrame()).toContain('saudável')
+      expect(instance.lastFrame()).not.toContain('não verificado')
+    })
+
+    instance.unmount()
+  })
+
   it('loads the workspace and navigates through help and the command palette', async () => {
     const instance = render(
       <App
@@ -93,16 +222,91 @@ describe('interactive application', () => {
       />,
     )
 
-    await vi.waitFor(() => expect(instance.lastFrame()).toContain('2/2 scripts'))
+    await vi.waitFor(() => {
+      expect(instance.lastFrame()).toContain('2/2 scripts')
+      expect(instance.lastFrame()).toContain('> build')
+    })
     instance.stdin.write('/')
     await vi.waitFor(() => expect(instance.lastFrame()).toContain('Buscar uma ação'))
+    await flushTui()
 
     instance.stdin.write('lint')
+    await vi.waitFor(() => expect(instance.lastFrame()).toContain('>lint'))
     instance.stdin.write('\u001B')
     await vi.waitFor(() => {
       expect(instance.lastFrame()).toContain('Busca: todos os scripts')
       expect(instance.lastFrame()).toContain('2/2 scripts')
       expect(instance.lastFrame()).not.toContain('Ações rápidas')
+    })
+
+    instance.unmount()
+  })
+
+  it('lets the focused Breadcrumb navigate without activating the hidden table', async () => {
+    const instance = render(
+      <App
+        cwd={workspace.path}
+        initialRoute="task-list"
+        services={createServices()}
+        stdinIsTTY
+        stdoutIsTTY
+      />,
+    )
+
+    await vi.waitFor(() => {
+      expect(instance.lastFrame()).toContain('2/2 scripts')
+      expect(instance.lastFrame()).toContain('> build')
+    })
+    instance.stdin.write('\t')
+    await flushTui()
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    instance.stdin.write('\u001B[D')
+    await flushTui()
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    instance.stdin.write('\r')
+
+    await vi.waitFor(() => {
+      expect(instance.lastFrame()).toContain('Ações rápidas')
+      expect(instance.lastFrame()).not.toContain('CONFIRMAR EXECUÇÃO')
+    })
+
+    instance.unmount()
+  })
+
+  it('gates global shortcuts while a dialog is open and releases them after cleanup', async () => {
+    const instance = render(
+      <App
+        cwd={workspace.path}
+        initialRoute="task-run"
+        initialTask="build"
+        services={createServices()}
+        stdinIsTTY
+        stdoutIsTTY
+      />,
+    )
+
+    await vi.waitFor(() =>
+      expect(instance.lastFrame()).toContain('Executar “build” neste workspace?'),
+    )
+    await flushTui()
+
+    instance.stdin.write('?')
+    instance.stdin.write('/')
+    await flushTui()
+    expect(instance.lastFrame()).toContain('CONFIRMAR EXECUÇÃO')
+    expect(instance.lastFrame()).not.toContain('Buscar uma ação')
+    expect(instance.lastFrame()).not.toContain('Navegar e alternar foco')
+    const dialogFooter = (instance.lastFrame() ?? '').split('\n').at(-2) ?? ''
+    expect(dialogFooter).toContain('Left/Right escolher')
+    expect(dialogFooter).not.toContain('/ comandos')
+    expect(dialogFooter).not.toContain('? ajuda')
+
+    instance.stdin.write('\u001B')
+    await vi.waitFor(() => expect(instance.lastFrame()).toContain('Tarefas do package.json'))
+    instance.stdin.write('/')
+    await vi.waitFor(() => {
+      expect(instance.lastFrame()).toContain('Buscar uma ação')
+      expect((instance.lastFrame() ?? '').split('\n').at(-2)).toContain('Digite para buscar')
     })
 
     instance.unmount()
@@ -165,9 +369,11 @@ describe('interactive application', () => {
     const taskLines = taskFrame.split('\n')
     expect(taskLines).toHaveLength(24)
     expect(Math.max(...taskLines.map((line) => stringWidth(line)))).toBeLessThanOrEqual(80)
-    expect(taskLines.filter((line) => line.includes('LONG-COMMAND-'))).toHaveLength(1)
+    expect(taskFrame).toContain('CONFIRMAR EXECUÇÃO')
     expect(taskFrame).not.toContain(longTask.command)
-    expect(taskFrame).toContain('Executar “deploy-with-a-descriptive-script-name”?')
+    expect(taskFrame).toContain('Executar “deploy-with-a-descriptive-script-name” neste')
+    expect(taskFrame).toContain('workspace?')
+    expect(taskFrame).toContain('LONG')
 
     instance.unmount()
   })
@@ -208,12 +414,23 @@ describe('interactive application', () => {
       />,
     )
 
-    await vi.waitFor(() => expect(instance.lastFrame()).toContain('Executar “build”?'))
+    await vi.waitFor(() =>
+      expect(instance.lastFrame()).toContain('Executar “build” neste workspace?'),
+    )
+    await flushTui()
     instance.stdin.write('\r')
-    await vi.waitFor(() => expect(instance.lastFrame()).toContain('still running'))
+    await vi.waitFor(() => {
+      expect(instance.lastFrame()).toContain('still running')
+      expect((instance.lastFrame() ?? '').split('\n').at(-2)).toContain('? ajuda')
+      expect((instance.lastFrame() ?? '').split('\n').at(-2)).not.toContain('Enter/Y confirmar')
+    })
 
     instance.stdin.write('?')
-    await vi.waitFor(() => expect(instance.lastFrame()).toContain('Navegar e alternar foco'))
+    await vi.waitFor(() => {
+      expect(instance.lastFrame()).toContain('Navegar e alternar foco')
+      expect((instance.lastFrame() ?? '').split('\n').at(-2)).toContain('? ou Esc fechar')
+      expect((instance.lastFrame() ?? '').split('\n').at(-2)).toContain('Ctrl+C cancelar')
+    })
     expect(taskSignal?.aborted).toBe(false)
     expect(onTaskCompleted).not.toHaveBeenCalled()
 
@@ -226,7 +443,7 @@ describe('interactive application', () => {
     })
 
     instance.stdin.write('\u001B')
-    await vi.waitFor(() => expect(instance.lastFrame()).toMatch(/cancelled [|·] código 130/u))
+    await vi.waitFor(() => expect(instance.lastFrame()).toContain('Tarefa cancelada'))
     instance.unmount()
   })
 
@@ -243,19 +460,25 @@ describe('interactive application', () => {
       />,
     )
 
-    await vi.waitFor(() => expect(instance.lastFrame()).toContain('Executar “build”?'))
+    await vi.waitFor(() =>
+      expect(instance.lastFrame()).toContain('Executar “build” neste workspace?'),
+    )
     resizeTui(instance, {columns: 80, rows: 34})
 
     for (let run = 1; run <= 5; run += 1) {
       if (run > 1) {
+        await flushTui()
         instance.stdin.write('r')
-        await vi.waitFor(() => expect(instance.lastFrame()).toContain('Executar “build”?'))
+        await vi.waitFor(() =>
+          expect(instance.lastFrame()).toContain('Executar “build” neste workspace?'),
+        )
       }
 
+      await flushTui()
       instance.stdin.write('\r')
       await vi.waitFor(() => {
         expect(runTask).toHaveBeenCalledTimes(run)
-        expect(instance.lastFrame()).toContain('succeeded')
+        expect(instance.lastFrame()).toContain('sucesso')
       })
     }
 
@@ -269,9 +492,9 @@ describe('interactive application', () => {
     expect(lines).toHaveLength(34)
     expect(Math.max(...lines.map((line) => stringWidth(line)))).toBeLessThanOrEqual(80)
     expect(frame).toContain('Início')
-    expect(frame).toContain('Pacote: fixture-project')
+    expect(frame).toContain('Workspace: fixture-project')
     expect(frame).toContain('Scripts: 2')
-    expect(frame).toContain('Sessão: build (succeeded)')
+    expect(frame).toContain('Sessão: build (sucesso)')
     expect(frame).not.toContain('Execuções nesta sessão')
     expect(frame).toContain('Tab')
     expect(frame).toContain('Ctrl+C sair')

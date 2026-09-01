@@ -109,6 +109,8 @@ repeating raw colors, allowing a product-wide theme change without rewriting ind
 The template's building blocks include:
 
 - `AppShell` for header, content, and shortcut regions;
+- `Breadcrumb`, `Alert`, and `Dialog` for route context, prominent feedback, and focused decisions;
+- `ProgressBar` for measurable totals and product-level phase progress for indeterminate tasks;
 - `CommandPalette` for `/` navigation;
 - `Menu`, `Select`, and `Table` for navigable data;
 - `Spinner` and the product-level `LogPanel` for long-running work;
@@ -117,6 +119,17 @@ The template's building blocks include:
 
 Not every component needs to come directly from the registry. Product compositions can combine
 termcn primitives and remain in `components/app`.
+
+The dashboard shell is one such composition. It combines the branded header, breadcrumb, routed
+content, mutually exclusive overlays, alerts, and contextual footer while leaving business state in
+feature controllers. Its layout has three modes: compact below 90 columns or 28 rows, wide from 110
+columns and 30 rows, and standard otherwise.
+
+Registry source is reviewed before use. In particular, interactive breadcrumbs separate moving a
+focus cursor from activating a route, dialogs suspend global shortcuts while their focus scope is
+active, native controls consume input only while focused, and progress values are clamped to their
+real range. Never estimate task completion from elapsed time: use a spinner and named phases when a
+use case has no measurable total.
 
 ## Terminal capabilities
 

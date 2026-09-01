@@ -227,12 +227,19 @@ directory, and an `AbortSignal`.
 
 This folder owns the shell of one Ink application:
 
+- the dashboard shell composes the branded header, breadcrumb, alert region, routed viewport,
+  mutually exclusive overlays, and contextual footer;
 - `screens/` contains global screens such as Home and Help;
 - feature-specific screens remain in `src/features/<feature>/tui/`;
 - `components/ui/` contains vendored termcn primitives;
 - `components/app/` contains product-specific compositions;
 - `hooks/` contains vendored termcn hooks;
 - `routes.ts`, `router.tsx`, and `keymap.ts` define navigation and global keyboard behavior.
+
+Viewport width and height resolve to compact, standard, or wide presentation modes. This is a
+delivery concern: feature use cases never branch on terminal dimensions. Session-only presentation
+state, such as recent runs and the latest diagnostic report, belongs to the shell and is not added to
+domain results.
 
 ### `src/components/`, `src/lib/`, and `src/providers/`
 

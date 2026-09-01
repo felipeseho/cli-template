@@ -9,6 +9,11 @@ export type ScreenRoute =
 
 export type InitialRoute = ScreenName | ScreenRoute
 
+export interface RouteBreadcrumb {
+  readonly label: string
+  readonly route: ScreenRoute
+}
+
 export function normalizeRoute(route: InitialRoute = 'home', initialTask?: string): ScreenRoute {
   if (typeof route !== 'string') {
     if (route.screen === 'task-run' && initialTask && !route.taskName) {
@@ -23,22 +28,31 @@ export function normalizeRoute(route: InitialRoute = 'home', initialTask?: strin
     : {screen: route}
 }
 
-export const screenLabel = (route: ScreenRoute): string => {
+export function routeBreadcrumbs(route: ScreenRoute): readonly RouteBreadcrumb[] {
+  const home: RouteBreadcrumb = {label: 'Início', route: {screen: 'home'}}
+
   switch (route.screen) {
+    case 'home': {
+      return [home]
+    }
     case 'doctor': {
-      return 'Doctor'
+      return [home, {label: 'Doctor', route: {screen: 'doctor'}}]
     }
     case 'help': {
-      return 'Ajuda'
-    }
-    case 'home': {
-      return 'Início'
+      return [home, {label: 'Ajuda', route: {screen: 'help'}}]
     }
     case 'task-list': {
-      return 'Tarefas'
+      return [home, {label: 'Tarefas', route: {screen: 'task-list'}}]
     }
     case 'task-run': {
-      return route.taskName ? `Executar ${route.taskName}` : 'Executar tarefa'
+      return [
+        home,
+        {label: 'Tarefas', route: {screen: 'task-list'}},
+        {
+          label: route.taskName ?? 'Executar',
+          route,
+        },
+      ]
     }
   }
 }

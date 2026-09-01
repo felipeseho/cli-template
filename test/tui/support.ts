@@ -54,8 +54,11 @@ export function createServices(overrides: Partial<ApplicationServices> = {}): Ap
   }
 }
 
-export function flushTui(): Promise<void> {
-  return new Promise((resolve) => setImmediate(resolve))
+export async function flushTui(): Promise<void> {
+  // Ink registers focus and input handlers in passive effects. One event-loop
+  // turn can expose the rendered control before its keyboard handler is ready.
+  await new Promise<void>((resolve) => setImmediate(resolve))
+  await new Promise<void>((resolve) => setImmediate(resolve))
 }
 
 export function resizeTui(

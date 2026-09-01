@@ -145,12 +145,14 @@ Exit codes are part of the contract:
 
 The TUI runs as a single Ink root in the alternate screen and includes:
 
-- a workspace-aware home screen with quick actions and session history;
+- a developer-ops dashboard with a branded header, route breadcrumb, contextual alerts, and
+  responsive metric cards;
+- a workspace-aware home screen with quick actions, environment health, and session history;
 - searchable task discovery and task details;
-- confirmation, progress, duration, logs, and cancellation;
+- focused confirmation dialogs, honest phase progress, duration, live logs, and cancellation;
 - environment diagnostics with recommendations and refresh;
 - a `/` command palette, `?` help, and keyboard-first navigation;
-- one- and two-column layouts based on terminal width.
+- compact, standard, and wide layouts based on terminal width and height.
 
 While a task is running, `Ctrl+C` cancels its process. While idle, `Ctrl+C` exits the application.
 Cleanup restores raw mode, the cursor, and the screen buffer.
@@ -205,6 +207,10 @@ because it builds and installs the real tarball.
 termcn follows the shadcn model: component source is copied into the repository and becomes part of
 the product. There is no registry dependency at runtime or in CI. Add, customize, and review
 components like any other application code.
+
+The dashboard uses source-owned termcn primitives for breadcrumbs, alerts, progress, dialogs,
+spinners, logs, tables, and focus scopes. Long-running commands only display a percentage when the
+underlying operation exposes a real total; npm scripts use phase progress and elapsed time instead.
 
 See [Using termcn](docs/termcn.md) for registry aliases, vendored source conventions, themes, and
 Node ESM requirements.

@@ -8,6 +8,7 @@ import {TaskRunScreen} from '@/features/tasks/tui/task-run-screen.js'
 import type {TaskActivity} from '@/features/tasks/tui/use-task-run.js'
 import type {Workspace} from '@/features/workspace/index.js'
 import type {ApplicationServices} from '@/runtime/services.js'
+import type {DashboardLayout} from '@/tui/layout.js'
 
 import type {ScreenRoute} from './routes.js'
 import type {RecentRun} from './screens/home.js'
@@ -17,8 +18,11 @@ import {HomeScreen} from './screens/home.js'
 export interface RouterProps {
   readonly diagnosticContext: DiagnosticContext
   readonly inputEnabled: boolean
+  readonly lastDiagnosticReport?: DiagnosticReport
+  readonly layout: DashboardLayout
   readonly navigate: (route: ScreenRoute) => void
   readonly onDiagnosticsCompleted?: (report: DiagnosticReport) => void
+  readonly onDialogOpenChange: (isOpen: boolean) => void
   readonly onTaskActivityChange: (activity: TaskActivity) => void
   readonly onTaskCompleted: (result: TaskResult) => void
   readonly recentRuns: readonly RecentRun[]
@@ -35,8 +39,11 @@ export interface RouterProps {
 export function Router({
   diagnosticContext,
   inputEnabled,
+  lastDiagnosticReport,
+  layout,
   navigate,
   onDiagnosticsCompleted,
+  onDialogOpenChange,
   onTaskActivityChange,
   onTaskCompleted,
   recentRuns,
@@ -79,12 +86,12 @@ export function Router({
         <HomeScreen
           error={workspaceError}
           inputEnabled={inputEnabled}
+          lastDiagnosticReport={lastDiagnosticReport}
+          layout={layout}
           loading={workspaceLoading}
           navigate={navigate}
           recentRuns={recentRuns}
           tasks={tasks}
-          viewportRows={viewportRows}
-          wide={wide}
           workspace={workspace}
         />
       )
@@ -114,6 +121,7 @@ export function Router({
           navigate={navigate}
           onActivityChange={onTaskActivityChange}
           onCompleted={onTaskCompleted}
+          onDialogOpenChange={onDialogOpenChange}
           runTask={runTask}
           tasks={tasks}
           viewportRows={viewportRows}

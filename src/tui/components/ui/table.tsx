@@ -287,10 +287,15 @@ export const Table = <
           color={resolvedBorderColor}
         />
         {visible.map((row, rowIdx) => {
-          const isActive = visibleStart + rowIdx === activeRow && selectable;
-          const rowCells = columns.map((col) => ({
+          const isActive = isFocused && visibleStart + rowIdx === activeRow && selectable;
+          const rowCells = columns.map((col, columnIndex) => ({
             align: col.align ?? ("left" as const),
-            text: String(row[col.key] ?? ""),
+            text:
+              selectable && columnIndex === 0
+                ? `${isActive ? (unicode ? "›" : ">") : " "} ${String(
+                    row[col.key] ?? ""
+                  )}`
+                : String(row[col.key] ?? ""),
           }));
           return (
             <CellRow

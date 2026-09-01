@@ -124,6 +124,7 @@ export const Menu = ({
       paddingX={1}
       paddingY={0}
       marginLeft={depth * 2}
+      width="100%"
     >
       {(title || ariaLabel) && (
         <Box marginBottom={1}>

@@ -3,9 +3,9 @@ import {useMemo, useState} from 'react'
 
 import type {Task} from '@/features/tasks/index.js'
 import type {Workspace} from '@/features/workspace/index.js'
-import {EmptyState} from '@/tui/components/app/empty-state.js'
 import {Panel} from '@/tui/components/app/panel.js'
 import {ScreenTitle} from '@/tui/components/app/screen-title.js'
+import {Alert} from '@/tui/components/ui/alert.js'
 import {StatusMessage} from '@/tui/components/ui/status-message.js'
 import {Table, type Column} from '@/tui/components/ui/table.js'
 import {useTheme} from '@/tui/hooks/use-theme.js'
@@ -97,23 +97,32 @@ export function TaskListScreen({
         </StatusMessage>
       ) : null}
       {!loading && !workspace ? (
-        <EmptyState
-          detail={error ?? 'Abra a CLI na raiz de um projeto Node.js.'}
-          title="Não há workspace para listar"
-        />
+        <Alert title="Não há workspace para listar" variant="error">
+          {error ?? 'Abra a CLI na raiz de um projeto Node.js.'}
+        </Alert>
       ) : null}
       {!loading && workspace ? (
-        <Panel title={`Busca: ${filter || 'todos os scripts'}`}>
+        <Panel title={`SCRIPTS · Busca: ${filter || 'todos os scripts'}`}>
+          <Box justifyContent="space-between" marginBottom={tasks.length > 0 ? 1 : 0}>
+            <Text color={theme.colors.mutedForeground} wrap="truncate-end">
+              {filter ? `Filtrando por “${filter}”` : 'Digite para buscar por nome ou comando'}
+            </Text>
+            <Text bold color={theme.colors.info}>
+              {filteredTasks.length}/{tasks.length} scripts
+            </Text>
+          </Box>
           {tasks.length === 0 ? (
-            <EmptyState
-              detail="Adicione ao menos uma entrada em package.json#scripts."
-              title="Este workspace não possui scripts"
-            />
+            <Alert bordered={false} title="Este workspace não possui scripts" variant="warning">
+              Adicione ao menos uma entrada em package.json#scripts.
+            </Alert>
           ) : rows.length === 0 ? (
-            <EmptyState
-              detail="Backspace remove caracteres; Ctrl+U limpa a busca."
+            <Alert
+              bordered={false}
               title={`Nenhum script corresponde a “${filter}”`}
-            />
+              variant="warning"
+            >
+              Backspace remove caracteres; Ctrl+U limpa a busca.
+            </Alert>
           ) : (
             <Table
               aria-label="Scripts disponíveis"
@@ -127,9 +136,12 @@ export function TaskListScreen({
               selectable
             />
           )}
-          <Text color={theme.colors.mutedForeground} dimColor>
-            {filteredTasks.length}/{tasks.length} scripts {unicode ? '·' : '|'} Ctrl+U limpa a busca
-          </Text>
+          {tasks.length > 0 ? (
+            <Text color={theme.colors.mutedForeground} dimColor>
+              {unicode ? '↑↓' : 'Up/Down'} navegar {unicode ? '·' : '|'} Enter executar{' '}
+              {unicode ? '·' : '|'} Ctrl+U limpar busca
+            </Text>
+          ) : null}
         </Panel>
       ) : null}
     </Box>
