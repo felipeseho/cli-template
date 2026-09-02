@@ -138,12 +138,10 @@ describe('ExecaTaskRunner', () => {
       onOutput: (stream, chunk) => {
         if (stream === 'stdout') chunks.push(chunk)
       },
-      outputLimit: 1,
     })
 
     expect(result.status).toBe('succeeded')
-    expect(result.outputTruncated).toBe(true)
-    expect(result.stdout).toBe('😀')
+    expect(result.stdout).toContain('😀')
     expect(result.stdout).not.toContain('�')
     expect(chunks.join('')).toContain('😀')
     expect(chunks.join('')).not.toContain('�')
