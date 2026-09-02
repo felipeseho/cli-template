@@ -132,7 +132,9 @@ export function setupCliTestEnvironment() {
     await Promise.all(
       temporaryDirectories
         .splice(0)
-        .map(async (directory) => rm(directory, {force: true, recursive: true})),
+        .map(async (directory) =>
+          rm(directory, {force: true, maxRetries: 3, recursive: true, retryDelay: 100}),
+        ),
     )
   })
 

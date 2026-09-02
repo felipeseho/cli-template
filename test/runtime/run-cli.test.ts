@@ -1,4 +1,6 @@
 import {PassThrough} from 'node:stream'
+import {join} from 'node:path'
+import {fileURLToPath, pathToFileURL} from 'node:url'
 
 import type * as OclifCore from '@oclif/core'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
@@ -33,6 +35,9 @@ vi.mock('@/runtime/container.js', () => ({
 vi.mock('@/runtime/render-tui.js', () => ({renderTui: runtime.renderTui}))
 
 import {resolveCliInvocation, runCli} from '@/runtime/run-cli.js'
+
+const runEntryPoint = pathToFileURL(join(process.cwd(), 'bin', 'run.js')).href
+const developmentEntryPoint = pathToFileURL(join(process.cwd(), 'bin', 'dev.js')).href
 
 function terminalStreams(isTTY: boolean) {
   const stdin = new PassThrough()
@@ -89,30 +94,30 @@ describe('CLI runtime dispatch', () => {
   })
 
   it('delegates root text fallback and regular commands to oclif', async () => {
-    await runCli({args: [], dir: 'file:///repo/bin/run.js', ...terminalStreams(false)})
+    await runCli({args: [], dir: runEntryPoint, ...terminalStreams(false)})
     expect(core.execute).toHaveBeenLastCalledWith({
       args: ['--help'],
       development: false,
-      dir: 'file:///repo/bin/run.js',
+      dir: runEntryPoint,
     })
 
     await runCli({
       args: ['task', 'list'],
-      dir: 'file:///repo/bin/run.js',
+      dir: runEntryPoint,
       ...terminalStreams(true),
     })
     expect(core.execute).toHaveBeenLastCalledWith({
       args: ['task', 'list'],
       development: false,
-      dir: 'file:///repo/bin/run.js',
+      dir: runEntryPoint,
     })
     expect(core.loadConfig).not.toHaveBeenCalled()
   })
 
   it('loads config, runs lifecycle hooks, and opens the root dashboard in a TTY', async () => {
-    await runCli({args: [], dir: 'file:///repo/bin/run.js', ...terminalStreams(true)})
+    await runCli({args: [], dir: runEntryPoint, ...terminalStreams(true)})
 
-    expect(core.loadConfig).toHaveBeenCalledWith('/repo/bin/run.js')
+    expect(core.loadConfig).toHaveBeenCalledWith(fileURLToPath(runEntryPoint))
     expect(runHook).toHaveBeenNthCalledWith(1, 'init', {argv: [], id: undefined})
     expect(runtime.renderTui).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -135,7 +140,7 @@ describe('CLI runtime dispatch', () => {
     const failure = new Error('render failed')
     runtime.renderTui.mockRejectedValue(failure)
 
-    await runCli({args: [], dir: 'file:///repo/bin/run.js', ...terminalStreams(true)})
+    await runCli({args: [], dir: runEntryPoint, ...terminalStreams(true)})
 
     expect(runHook).toHaveBeenLastCalledWith('finally', expect.objectContaining({error: failure}))
     expect(core.handle).toHaveBeenCalledWith(failure)
@@ -149,7 +154,7 @@ describe('CLI runtime dispatch', () => {
     const failure = new Error('init failed')
     runHook.mockRejectedValueOnce(failure)
 
-    await runCli({args: [], dir: 'file:///repo/bin/run.js', ...terminalStreams(true)})
+    await runCli({args: [], dir: runEntryPoint, ...terminalStreams(true)})
 
     expect(runtime.renderTui).not.toHaveBeenCalled()
     expect(runHook).toHaveBeenLastCalledWith('finally', expect.objectContaining({error: failure}))
@@ -164,7 +169,7 @@ describe('CLI runtime dispatch', () => {
     const failure = new Error('flush failed')
     core.flush.mockRejectedValueOnce(failure)
 
-    await runCli({args: [], dir: 'file:///repo/bin/run.js', ...terminalStreams(true)})
+    await runCli({args: [], dir: runEntryPoint, ...terminalStreams(true)})
 
     expect(runHook).toHaveBeenLastCalledWith('finally', expect.objectContaining({error: undefined}))
     expect(core.handle).toHaveBeenCalledWith(failure)
@@ -181,7 +186,7 @@ describe('CLI runtime dispatch', () => {
     await runCli({
       args: [],
       development: true,
-      dir: 'file:///repo/bin/dev.js',
+      dir: developmentEntryPoint,
       ...terminalStreams(true),
     })
 
