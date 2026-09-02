@@ -62,6 +62,7 @@ flowchart LR
 ```
 
 ## What you get
+
 ### Give humans a first-class terminal experience
 
 The TUI runs as a single Ink root with a responsive dashboard, searchable tasks, diagnostics,
