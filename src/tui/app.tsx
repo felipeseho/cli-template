@@ -249,39 +249,39 @@ function AppContent({
     () => [
       {
         disabled: isTaskRunning,
-        group: 'Navegação',
+        group: 'Navigation',
         id: 'home',
-        label: 'Ir para o início',
+        label: 'Go home',
         onSelect: () => navigate({screen: 'home'}),
       },
       {
         disabled: isTaskRunning,
-        group: 'Navegação',
+        group: 'Navigation',
         id: 'tasks',
-        label: 'Listar tarefas',
+        label: 'List tasks',
         onSelect: () => navigate({screen: 'task-list'}),
       },
       {
         disabled: isTaskRunning,
-        group: 'Navegação',
+        group: 'Navigation',
         id: 'doctor',
-        label: 'Executar doctor',
+        label: 'Run doctor',
         onSelect: () => navigate({screen: 'doctor'}),
       },
       {
         disabled: isTaskRunning,
-        group: 'Navegação',
+        group: 'Navigation',
         id: 'help',
-        label: 'Mostrar ajuda',
+        label: 'Show help',
         onSelect: () => navigate({screen: 'help'}),
         shortcut: '?',
       },
       ...tasks.map<Command>((task) => ({
         description: task.command,
         disabled: isTaskRunning,
-        group: 'Tarefas',
+        group: 'Tasks',
         id: `run-${task.name}`,
-        label: `Executar ${task.name}`,
+        label: `Run ${task.name}`,
         onSelect: () => navigate({screen: 'task-run', taskName: task.name}),
       })),
     ],
@@ -312,96 +312,88 @@ function AppContent({
         ? ('warning' as const)
         : ('ready' as const)
   const footerSeparator = unicode ? ' · ' : ' | '
-  const navigationHint = wide ? `${unicode ? '↑↓' : 'Up/Down'} navegar` : unicode ? '↑↓' : 'Up/Down'
+  const navigationHint = wide
+    ? `${unicode ? '↑↓' : 'Up/Down'} navigate`
+    : unicode
+      ? '↑↓'
+      : 'Up/Down'
   const routeFooterItems = (() => {
     switch (route.screen) {
       case 'doctor': {
         return wide
           ? [
-              'R repetir diagnóstico',
-              'Tab alternar foco',
-              '/ comandos',
-              '? ajuda',
-              'Esc voltar',
-              'Ctrl+C sair',
+              'R rerun diagnostics',
+              'Tab toggle focus',
+              '/ commands',
+              '? help',
+              'Esc back',
+              'Ctrl+C exit',
             ]
-          : ['R repetir', 'Tab', '/ ações', '? ajuda', 'Esc', 'Ctrl+C sair']
+          : ['R retry', 'Tab', '/ actions', '? help', 'Esc', 'Ctrl+C exit']
       }
       case 'help': {
         return wide
-          ? ['Tab alternar foco', '/ comandos', '? fechar ajuda', 'Esc voltar', 'Ctrl+C sair']
-          : ['Tab', '/ ações', '? fechar', 'Esc', 'Ctrl+C sair']
+          ? ['Tab toggle focus', '/ commands', '? close help', 'Esc back', 'Ctrl+C exit']
+          : ['Tab', '/ actions', '? close', 'Esc', 'Ctrl+C exit']
       }
       case 'task-list': {
         return wide
           ? [
-              'Digite para buscar',
+              'Type to search',
               navigationHint,
-              'Enter executar',
-              'Tab alternar foco',
-              '/ comandos',
-              '? ajuda',
-              'Esc voltar',
+              'Enter run',
+              'Tab toggle focus',
+              '/ commands',
+              '? help',
+              'Esc back',
             ]
-          : ['Buscar', navigationHint, 'Enter', 'Tab', '/ ações', '? ajuda', 'Esc', 'Ctrl+C']
+          : ['Search', navigationHint, 'Enter', 'Tab', '/ actions', '? help', 'Esc', 'Ctrl+C']
       }
       case 'task-run': {
         if (isTaskRunning) {
           return wide
-            ? [
-                'J/K log',
-                'F follow',
-                'Tab alternar foco',
-                '/ comandos',
-                '? ajuda',
-                'Ctrl+C cancelar',
-              ]
-            : ['J/K log', 'F follow', 'Tab', '/ ações', '? ajuda', 'Ctrl+C cancelar']
+            ? ['J/K log', 'F follow', 'Tab toggle focus', '/ commands', '? help', 'Ctrl+C cancel']
+            : ['J/K log', 'F follow', 'Tab', '/ actions', '? help', 'Ctrl+C cancel']
         }
 
         return wide
           ? [
               navigationHint,
-              'Enter selecionar',
-              'Tab alternar foco',
-              '/ comandos',
-              '? ajuda',
-              'Esc voltar',
-              'Ctrl+C sair',
+              'Enter select',
+              'Tab toggle focus',
+              '/ commands',
+              '? help',
+              'Esc back',
+              'Ctrl+C exit',
             ]
-          : [navigationHint, 'Enter', 'Tab', '/ ações', '? ajuda', 'Esc', 'Ctrl+C sair']
+          : [navigationHint, 'Enter', 'Tab', '/ actions', '? help', 'Esc', 'Ctrl+C exit']
       }
       default: {
         return wide
           ? [
               navigationHint,
-              'Enter selecionar',
-              'Tab alternar foco',
-              '/ comandos',
-              '? ajuda',
-              'Esc sair',
-              'Ctrl+C sair',
+              'Enter select',
+              'Tab toggle focus',
+              '/ commands',
+              '? help',
+              'Esc exit',
+              'Ctrl+C exit',
             ]
-          : [navigationHint, 'Enter', 'Tab', '/ ações', '? ajuda', 'Esc', 'Ctrl+C sair']
+          : [navigationHint, 'Enter', 'Tab', '/ actions', '? help', 'Esc', 'Ctrl+C exit']
       }
     }
   })()
   const footerItems = dialogOpen
-    ? [
-        `${unicode ? '←/→' : 'Left/Right'} escolher`,
-        'Enter/Y confirmar',
-        'Esc/N voltar',
-        'Ctrl+C sair',
-      ]
+    ? [`${unicode ? '←/→' : 'Left/Right'} choose`, 'Enter/Y confirm', 'Esc/N back', 'Ctrl+C exit']
     : helpOverlayOpen
-      ? ['Tab alternar foco', '? ou Esc fechar', `Ctrl+C ${isTaskRunning ? 'cancelar' : 'sair'}`]
+      ? ['Tab toggle focus', '? or Esc close', `Ctrl+C ${isTaskRunning ? 'cancel' : 'exit'}`]
       : paletteOpen
         ? [
-            'Digite para buscar',
+            'Type to search',
             navigationHint,
-            'Enter executar',
-            'Esc fechar',
-            `Ctrl+C ${isTaskRunning ? 'cancelar' : 'sair'}`,
+            'Enter run',
+            'Esc close',
+            `Ctrl+C ${isTaskRunning ? 'cancel' : 'exit'}`,
           ]
         : routeFooterItems
   const footer = footerItems.join(footerSeparator)
@@ -413,7 +405,7 @@ function AppContent({
       isOpen
       maxItems={Math.max(4, Math.min(10, viewportRows - 5))}
       onClose={() => setPaletteOpen(false)}
-      placeholder={unicode ? 'Buscar uma ação…' : 'Buscar uma ação...'}
+      placeholder={unicode ? 'Search actions…' : 'Search actions...'}
     />
   ) : undefined
 
@@ -421,7 +413,7 @@ function AppContent({
     <DashboardShell
       alert={
         workspaceError ? (
-          <Alert bordered={layout !== 'compact'} title="Workspace indisponível" variant="warning">
+          <Alert bordered={layout !== 'compact'} title="Workspace unavailable" variant="warning">
             <Text color={theme.colors.mutedForeground} wrap="truncate-end">
               {workspaceError}
             </Text>
@@ -430,7 +422,7 @@ function AppContent({
       }
       breadcrumb={
         <Breadcrumb
-          aria-label="Navegação atual"
+          aria-label="Current navigation"
           currentIndex={breadcrumbItems.length - 1}
           id="dashboard-breadcrumb"
           isActive={!paletteOpen && !helpOverlayOpen && !dialogOpen}
@@ -480,7 +472,7 @@ function AppContent({
 
 export function App({
   cwd = process.cwd(),
-  description = 'Automação, diagnósticos e tarefas do workspace.',
+  description = 'Automation, diagnostics, and workspace tasks.',
   initialRoute,
   initialTask,
   name = 'mycli',

@@ -82,50 +82,46 @@ export function TaskListScreen({
   const rows: TaskRow[] = filteredTasks.map((task) => ({...task}))
   const columns: Column<TaskRow>[] = [
     {header: 'Script', key: 'name', width: wide ? 26 : 18},
-    {header: 'Comando', key: 'command', width: wide ? 66 : 42},
+    {header: 'Command', key: 'command', width: wide ? 66 : 42},
   ]
 
   return (
     <Box flexDirection="column">
       <ScreenTitle
-        description="Digite para filtrar; use as setas e Enter para executar."
-        title="Tarefas do package.json"
+        description="Type to filter; use the arrow keys and Enter to run."
+        title="package.json tasks"
       />
       {loading ? (
         <StatusMessage variant="loading">
-          {unicode ? 'Carregando scripts…' : 'Carregando scripts...'}
+          {unicode ? 'Loading scripts…' : 'Loading scripts...'}
         </StatusMessage>
       ) : null}
       {!loading && !workspace ? (
-        <Alert title="Não há workspace para listar" variant="error">
-          {error ?? 'Abra a CLI na raiz de um projeto Node.js.'}
+        <Alert title="No workspace to list" variant="error">
+          {error ?? 'Run the CLI from the root of a Node.js project.'}
         </Alert>
       ) : null}
       {!loading && workspace ? (
-        <Panel title={`SCRIPTS · Busca: ${filter || 'todos os scripts'}`}>
+        <Panel title={`SCRIPTS · Search: ${filter || 'all scripts'}`}>
           <Box justifyContent="space-between" marginBottom={tasks.length > 0 ? 1 : 0}>
             <Text color={theme.colors.mutedForeground} wrap="truncate-end">
-              {filter ? `Filtrando por “${filter}”` : 'Digite para buscar por nome ou comando'}
+              {filter ? `Filtering by “${filter}”` : 'Type to search by name or command'}
             </Text>
             <Text bold color={theme.colors.info}>
               {filteredTasks.length}/{tasks.length} scripts
             </Text>
           </Box>
           {tasks.length === 0 ? (
-            <Alert bordered={false} title="Este workspace não possui scripts" variant="warning">
-              Adicione ao menos uma entrada em package.json#scripts.
+            <Alert bordered={false} title="This workspace has no scripts" variant="warning">
+              Add at least one entry to package.json#scripts.
             </Alert>
           ) : rows.length === 0 ? (
-            <Alert
-              bordered={false}
-              title={`Nenhum script corresponde a “${filter}”`}
-              variant="warning"
-            >
-              Backspace remove caracteres; Ctrl+U limpa a busca.
+            <Alert bordered={false} title={`No script matches “${filter}”`} variant="warning">
+              Backspace removes characters; Ctrl+U clears the search.
             </Alert>
           ) : (
             <Table
-              aria-label="Scripts disponíveis"
+              aria-label="Available scripts"
               autoFocus
               columns={columns}
               data={rows}
@@ -138,8 +134,8 @@ export function TaskListScreen({
           )}
           {tasks.length > 0 ? (
             <Text color={theme.colors.mutedForeground} dimColor>
-              {unicode ? '↑↓' : 'Up/Down'} navegar {unicode ? '·' : '|'} Enter executar{' '}
-              {unicode ? '·' : '|'} Ctrl+U limpar busca
+              {unicode ? '↑↓' : 'Up/Down'} navigate {unicode ? '·' : '|'} Enter run{' '}
+              {unicode ? '·' : '|'} Ctrl+U clear search
             </Text>
           ) : null}
         </Panel>

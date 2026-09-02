@@ -33,7 +33,7 @@ describe('tasks TUI', () => {
     instance.stdin.write('lint')
 
     await vi.waitFor(() => {
-      expect(instance.lastFrame()).toContain('Busca: lint')
+      expect(instance.lastFrame()).toContain('Search: lint')
       expect(instance.lastFrame()).toContain('1/2 scripts')
       expect(instance.lastFrame()).not.toContain('tsc -p tsconfig.json')
     })
@@ -68,7 +68,7 @@ describe('tasks TUI', () => {
 
     instance.stdin.write('\r')
     await vi.waitFor(() =>
-      expect(instance.lastFrame()).toContain('Executar “task-14” neste workspace?'),
+      expect(instance.lastFrame()).toContain('Run “task-14” in this workspace?'),
     )
 
     instance.unmount()
@@ -114,7 +114,7 @@ describe('tasks TUI', () => {
     })
     instance.stdin.write('\r')
     await vi.waitFor(() =>
-      expect(instance.lastFrame()).toContain('Executar “task-20” neste workspace?'),
+      expect(instance.lastFrame()).toContain('Run “task-20” in this workspace?'),
     )
 
     instance.unmount()
@@ -159,18 +159,16 @@ describe('tasks TUI', () => {
       />,
     )
 
-    await vi.waitFor(() =>
-      expect(instance.lastFrame()).toContain('Executar “build” neste workspace?'),
-    )
+    await vi.waitFor(() => expect(instance.lastFrame()).toContain('Run “build” in this workspace?'))
     await flushTui()
     instance.stdin.write('\r')
     await vi.waitFor(() => expect(instance.lastFrame()).toContain('starting'))
 
     instance.stdin.write('\u0003')
     await vi.waitFor(() => {
-      expect(instance.lastFrame()).toMatch(/cancelada [|·] código 130/u)
-      expect(instance.lastFrame()).toContain('[!] Executar')
-      expect(instance.lastFrame()).toContain('[!] Concluir')
+      expect(instance.lastFrame()).toMatch(/cancelled [|·] code 130/u)
+      expect(instance.lastFrame()).toContain('[!] Run')
+      expect(instance.lastFrame()).toContain('[!] Finish')
       expect(onExit).not.toHaveBeenCalled()
       expect(onTaskCompleted).toHaveBeenCalledWith(cancelledResult)
     })
@@ -203,9 +201,7 @@ describe('tasks TUI', () => {
       />,
     )
 
-    await vi.waitFor(() =>
-      expect(instance.lastFrame()).toContain('Executar “build” neste workspace?'),
-    )
+    await vi.waitFor(() => expect(instance.lastFrame()).toContain('Run “build” in this workspace?'))
     resizeTui(instance, {columns: 80, rows: 18})
     await flushTui()
     instance.stdin.write('\r')
@@ -215,18 +211,18 @@ describe('tasks TUI', () => {
     expect(frame.split('\n')).toHaveLength(18)
     expect(frame).not.toContain(longLine)
     expect(frame).toContain('Tab')
-    expect(frame).toContain('Ctrl+C cancelar')
+    expect(frame).toContain('Ctrl+C cancel')
 
     resolveTask?.(succeededResult)
-    await vi.waitFor(() => expect(instance.lastFrame()).toContain('sucesso'))
+    await vi.waitFor(() => expect(instance.lastFrame()).toContain('success'))
     const resultFrame = instance.lastFrame() ?? ''
     const resultLines = resultFrame.split('\n')
     expect(resultLines).toHaveLength(18)
     expect(Math.max(...resultLines.map((line) => stringWidth(line)))).toBeLessThanOrEqual(80)
-    expect(resultFrame).toContain('Tarefa concluída')
-    expect(resultFrame).toContain('LOG DA EXECUÇÃO')
-    expect(resultFrame).toContain('R repetir')
-    expect(resultLines.some((line) => line.includes('sucesso') && line.includes('---'))).toBe(false)
+    expect(resultFrame).toContain('Task completed')
+    expect(resultFrame).toContain('RUN LOG')
+    expect(resultFrame).toContain('R retry')
+    expect(resultLines.some((line) => line.includes('success') && line.includes('---'))).toBe(false)
     instance.unmount()
   })
 
@@ -260,16 +256,14 @@ describe('tasks TUI', () => {
     )
 
     resizeTui(instance, {columns: 120, rows: 40})
-    await vi.waitFor(() =>
-      expect(instance.lastFrame()).toContain('Executar “build” neste workspace?'),
-    )
+    await vi.waitFor(() => expect(instance.lastFrame()).toContain('Run “build” in this workspace?'))
     await flushTui()
     instance.stdin.write('\r')
 
     await vi.waitFor(() => {
-      expect(instance.lastFrame()).toContain('Tarefa concluída')
+      expect(instance.lastFrame()).toContain('Task completed')
       expect(instance.lastFrame()).toContain('RED DONE')
-      expect(instance.lastFrame()).toContain('Saída truncada')
+      expect(instance.lastFrame()).toContain('Output truncated')
       expect(instance.lastFrame()).not.toContain('\u001B')
       expect(onTaskCompleted).toHaveBeenCalledWith(rawResult)
       expect(rawResult.stdout).toBe(rawOutput)
@@ -294,25 +288,21 @@ describe('tasks TUI', () => {
       />,
     )
 
-    await vi.waitFor(() =>
-      expect(instance.lastFrame()).toContain('Executar “build” neste workspace?'),
-    )
+    await vi.waitFor(() => expect(instance.lastFrame()).toContain('Run “build” in this workspace?'))
     await flushTui()
     instance.stdin.write('\r')
     await vi.waitFor(() => {
-      expect(instance.lastFrame()).toContain('Não foi possível concluir a tarefa')
+      expect(instance.lastFrame()).toContain('Unable to complete task')
       expect(instance.lastFrame()).toContain('Process spawn failed.')
-      expect(instance.lastFrame()).toContain('[!] Executar')
-      expect(instance.lastFrame()).toContain('[!] Concluir')
+      expect(instance.lastFrame()).toContain('[!] Run')
+      expect(instance.lastFrame()).toContain('[!] Finish')
       expect(onTaskError).toHaveBeenCalledOnce()
       expect(onTaskError).toHaveBeenCalledWith(failure)
     })
 
     await flushTui()
     instance.stdin.write('r')
-    await vi.waitFor(() =>
-      expect(instance.lastFrame()).toContain('Executar “build” neste workspace?'),
-    )
+    await vi.waitFor(() => expect(instance.lastFrame()).toContain('Run “build” in this workspace?'))
     expect(runTask).toHaveBeenCalledOnce()
 
     instance.unmount()
@@ -338,9 +328,7 @@ describe('tasks TUI', () => {
       />,
     )
 
-    await vi.waitFor(() =>
-      expect(instance.lastFrame()).toContain('Executar “build” neste workspace?'),
-    )
+    await vi.waitFor(() => expect(instance.lastFrame()).toContain('Run “build” in this workspace?'))
     await flushTui()
     instance.stdin.write('\r')
 
@@ -374,17 +362,15 @@ describe('tasks TUI', () => {
       />,
     )
 
-    await vi.waitFor(() =>
-      expect(instance.lastFrame()).toContain('Executar “build” neste workspace?'),
-    )
+    await vi.waitFor(() => expect(instance.lastFrame()).toContain('Run “build” in this workspace?'))
     await flushTui()
     instance.stdin.write('\r')
 
     await vi.waitFor(() => {
-      expect(instance.lastFrame()).toContain('Tarefa concluída com falha')
-      expect(instance.lastFrame()).toMatch(/falhou [|·] código 7/u)
-      expect(instance.lastFrame()).toContain('[!] Executar')
-      expect(instance.lastFrame()).toContain('[!] Concluir')
+      expect(instance.lastFrame()).toContain('Task failed')
+      expect(instance.lastFrame()).toMatch(/failed [|·] code 7/u)
+      expect(instance.lastFrame()).toContain('[!] Run')
+      expect(instance.lastFrame()).toContain('[!] Finish')
     })
 
     instance.unmount()
@@ -418,9 +404,7 @@ describe('tasks TUI', () => {
     )
 
     resizeTui(instance, {columns: 120, rows: 40})
-    await vi.waitFor(() =>
-      expect(instance.lastFrame()).toContain('Executar “build” neste workspace?'),
-    )
+    await vi.waitFor(() => expect(instance.lastFrame()).toContain('Run “build” in this workspace?'))
     await flushTui()
     instance.stdin.write('\r')
     await vi.waitFor(() => expect(instance.lastFrame()).toContain('FOLLOW'))
@@ -432,7 +416,7 @@ describe('tasks TUI', () => {
     await vi.waitFor(() => expect(instance.lastFrame()).toContain('FOLLOW'))
 
     resolveTask?.(succeededResult)
-    await vi.waitFor(() => expect(instance.lastFrame()).toContain('Tarefa concluída'))
+    await vi.waitFor(() => expect(instance.lastFrame()).toContain('Task completed'))
     instance.unmount()
   })
 
@@ -449,9 +433,7 @@ describe('tasks TUI', () => {
       />,
     )
 
-    await vi.waitFor(() =>
-      expect(instance.lastFrame()).toContain('Executar “build” neste workspace?'),
-    )
+    await vi.waitFor(() => expect(instance.lastFrame()).toContain('Run “build” in this workspace?'))
     instance.stdin.write('\t')
     instance.stdin.write('\u001B[A')
     instance.stdin.write('\u001B[B')
@@ -479,16 +461,16 @@ describe('tasks TUI', () => {
 
     await vi.waitFor(() => {
       expect(instance.lastFrame()).toContain('npm run -- build')
-      expect(instance.lastFrame()).toContain('Executar “build” neste workspace?')
+      expect(instance.lastFrame()).toContain('Run “build” in this workspace?')
     })
     await flushTui()
     instance.stdin.write('\u001B')
 
-    await vi.waitFor(() => expect(instance.lastFrame()).toContain('Tarefas do package.json'))
+    await vi.waitFor(() => expect(instance.lastFrame()).toContain('package.json tasks'))
     await flushTui()
-    expect(instance.lastFrame()).toContain('Tarefas do package.json')
-    expect(instance.lastFrame()).not.toContain('Ações rápidas')
-    expect(instance.lastFrame()).not.toContain('Executar “build” neste workspace?')
+    expect(instance.lastFrame()).toContain('package.json tasks')
+    expect(instance.lastFrame()).not.toContain('Quick actions')
+    expect(instance.lastFrame()).not.toContain('Run “build” in this workspace?')
     expect(runTask).not.toHaveBeenCalled()
 
     instance.unmount()

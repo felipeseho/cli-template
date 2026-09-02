@@ -49,7 +49,7 @@ describe('doctor TUI', () => {
       expect(instance.lastFrame()).toContain('PASS')
       expect(instance.lastFrame()).toContain('WARN')
       expect(instance.lastFrame()).toContain('FAIL')
-      expect(instance.lastFrame()).toContain('AÇÕES RECOMENDADAS')
+      expect(instance.lastFrame()).toContain('RECOMMENDED ACTIONS')
       expect(instance.lastFrame()).toContain('Install Git and reopen the terminal.')
       expect(instance.lastFrame()).toContain('Repair package.json.')
     })
@@ -124,7 +124,7 @@ describe('doctor TUI', () => {
     )
 
     await vi.waitFor(() => {
-      expect(instance.lastFrame()).toContain('Não foi possível executar o diagnóstico')
+      expect(instance.lastFrame()).toContain('Unable to run diagnostics')
       expect(instance.lastFrame()).toContain('Node probe failed.')
       expect(onDiagnosticsError).toHaveBeenCalledOnce()
       expect(onDiagnosticsError).toHaveBeenCalledWith(failure)

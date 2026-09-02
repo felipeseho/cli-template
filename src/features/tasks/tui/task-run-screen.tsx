@@ -43,9 +43,9 @@ interface PhaseTrailProps {
 const formatElapsed = (milliseconds: number): string => `${(milliseconds / 1000).toFixed(1)}s`
 
 const resultStatusLabel: Record<TaskStatus, string> = {
-  cancelled: 'cancelada',
-  failed: 'falhou',
-  succeeded: 'sucesso',
+  cancelled: 'cancelled',
+  failed: 'failed',
+  succeeded: 'success',
 }
 
 function PhaseTrail({phase, resultStatus}: PhaseTrailProps) {
@@ -77,10 +77,10 @@ function PhaseTrail({phase, resultStatus}: PhaseTrailProps) {
 
   return (
     <Text wrap="truncate-end">
-      <Text color={theme.colors.success}>{complete} Selecionar</Text>
+      <Text color={theme.colors.success}>{complete} Select</Text>
       <Text color={theme.colors.mutedForeground}>{link}</Text>
       <Text color={phase === 'confirm' ? theme.colors.primary : theme.colors.success}>
-        {phase === 'confirm' ? active : complete} Confirmar
+        {phase === 'confirm' ? active : complete} Confirm
       </Text>
       <Text color={theme.colors.mutedForeground}>{link}</Text>
       <Text
@@ -92,7 +92,7 @@ function PhaseTrail({phase, resultStatus}: PhaseTrailProps) {
               : theme.colors.mutedForeground
         }
       >
-        {executionSymbol} Executar
+        {executionSymbol} Run
       </Text>
       <Text color={theme.colors.mutedForeground}>{link}</Text>
       <Text
@@ -100,7 +100,7 @@ function PhaseTrail({phase, resultStatus}: PhaseTrailProps) {
           phase === 'finished' || phase === 'failed' ? outcomeColor : theme.colors.mutedForeground
         }
       >
-        {phase === 'finished' || phase === 'failed' ? outcomeSymbol : pending} Concluir
+        {phase === 'finished' || phase === 'failed' ? outcomeSymbol : pending} Finish
       </Text>
     </Text>
   )
@@ -112,13 +112,13 @@ function resultPresentation(result: TaskResult): {
 } {
   switch (result.status) {
     case 'succeeded': {
-      return {title: 'Tarefa concluída', variant: 'success'}
+      return {title: 'Task completed', variant: 'success'}
     }
     case 'cancelled': {
-      return {title: 'Tarefa cancelada', variant: 'warning'}
+      return {title: 'Task cancelled', variant: 'warning'}
     }
     case 'failed': {
-      return {title: 'Tarefa concluída com falha', variant: 'error'}
+      return {title: 'Task failed', variant: 'error'}
     }
   }
 }
@@ -216,8 +216,8 @@ export function TaskRunScreen({
   if (loading) {
     return (
       <Box flexDirection="column">
-        <ScreenTitle title="Executar tarefa" />
-        <Alert bordered={false} title={unicode ? 'Lendo o workspace…' : 'Lendo o workspace...'} />
+        <ScreenTitle title="Run task" />
+        <Alert bordered={false} title={unicode ? 'Reading workspace…' : 'Reading workspace...'} />
       </Box>
     )
   }
@@ -225,9 +225,9 @@ export function TaskRunScreen({
   if (!workspace) {
     return (
       <Box flexDirection="column">
-        <ScreenTitle title="Executar tarefa" />
-        <Alert title="Nenhum workspace disponível" variant="error">
-          {workspaceError ?? 'Abra a CLI dentro de um projeto Node.js.'}
+        <ScreenTitle title="Run task" />
+        <Alert title="No workspace available" variant="error">
+          {workspaceError ?? 'Run the CLI inside a Node.js project.'}
         </Alert>
       </Box>
     )
@@ -236,9 +236,9 @@ export function TaskRunScreen({
   if (tasks.length === 0) {
     return (
       <Box flexDirection="column">
-        <ScreenTitle title="Executar tarefa" />
-        <Alert title="Não há scripts para executar" variant="warning">
-          Crie uma entrada em package.json#scripts e abra esta tela novamente.
+        <ScreenTitle title="Run task" />
+        <Alert title="No scripts to run" variant="warning">
+          Add an entry to package.json#scripts and reopen this screen.
         </Alert>
       </Box>
     )
@@ -246,10 +246,10 @@ export function TaskRunScreen({
 
   const selection = (
     <Select
-      aria-label="Selecione uma tarefa"
+      aria-label="Select a task"
       autoFocus
       isActive={inputEnabled}
-      label="Escolha um script"
+      label="Choose a script"
       maxVisibleOptions={Math.max(3, Math.min(8, viewportRows - 7))}
       onSubmit={selectTask}
       options={tasks.map((task) => ({
@@ -265,16 +265,16 @@ export function TaskRunScreen({
     return (
       <Box alignItems="center" flexGrow={1} justifyContent="center">
         <Dialog
-          cancelLabel="Cancelar"
-          confirmLabel="Executar"
+          cancelLabel="Cancel"
+          confirmLabel="Run"
           defaultAction="confirm"
-          description={`Executar “${selected.name}” neste workspace?`}
+          description={`Run “${selected.name}” in this workspace?`}
           isActive={dialogOpen}
           onCancel={() => navigate({screen: 'task-list'})}
           onConfirm={() => void run()}
           onOpenChange={onDialogOpenChange}
           open={dialogOpen}
-          title="CONFIRMAR EXECUÇÃO"
+          title="CONFIRM RUN"
           width={Math.min(60, Math.max(36, columns - 6))}
         >
           <Text color={theme.colors.mutedForeground} wrap="truncate-end">
@@ -282,18 +282,18 @@ export function TaskRunScreen({
           </Text>
           <Box marginTop={1}>
             <ProgressBar
-              aria-label="Etapa de confirmação, 1 de 3"
+              aria-label="Confirmation step, 1 of 3"
               max={3}
               showPercent={false}
               showValue
               value={1}
-              valueLabel="1/3 etapas"
+              valueLabel="1/3 steps"
               width={Math.min(42, Math.max(12, columns - 20))}
             />
           </Box>
           <Text color={theme.colors.mutedForeground} dimColor wrap="truncate-end">
-            {unicode ? '←/→' : 'Left/Right'} escolher {separator} Enter/Y confirmar {separator}{' '}
-            Esc/N voltar
+            {unicode ? '←/→' : 'Left/Right'} choose {separator} Enter/Y confirm {separator} Esc/N
+            back
           </Text>
         </Dialog>
       </Box>
@@ -304,21 +304,22 @@ export function TaskRunScreen({
     <Box flexDirection="column">
       {!compact || phase === 'select' ? (
         <ScreenTitle
-          description={compact ? undefined : 'Execução segura via npm, sem interpolação de shell.'}
-          title="Executar tarefa"
+          description={compact ? undefined : 'Safe execution via npm, without shell interpolation.'}
+          title="Run task"
         />
       ) : null}
       {selectedTask && !selected ? (
         <Box flexDirection="column" gap={1}>
-          <Alert title={`O script “${selectedTask}” não existe neste workspace.`} variant="error">
-            Selecione um dos scripts disponíveis abaixo.
+          <Alert
+            title={`The script “${selectedTask}” does not exist in this workspace.`}
+            variant="error"
+          >
+            Select one of the available scripts below.
           </Alert>
           {selection}
         </Box>
       ) : null}
-      {!selectedTask && phase === 'select' ? (
-        <Panel title="SELECIONAR TAREFA">{selection}</Panel>
-      ) : null}
+      {!selectedTask && phase === 'select' ? <Panel title="SELECT TASK">{selection}</Panel> : null}
       {selected ? (
         <Box flexDirection="column" gap={compact ? 0 : 1}>
           {ultraCompact || (compact && phase !== 'running') ? (
@@ -328,12 +329,12 @@ export function TaskRunScreen({
                 resultStatus={result?.status}
               />
               <ProgressBar
-                aria-label={`Progresso da execução, ${phase === 'running' ? 2 : 3} de 3`}
+                aria-label={`Run progress, ${phase === 'running' ? 2 : 3} of 3`}
                 max={3}
                 showPercent={false}
                 showValue
                 value={phase === 'running' ? 2 : 3}
-                valueLabel={`${phase === 'running' ? 2 : 3}/3 etapas`}
+                valueLabel={`${phase === 'running' ? 2 : 3}/3 steps`}
                 width={Math.max(12, columns - 25)}
               />
               {phase === 'running' ? (
@@ -342,9 +343,9 @@ export function TaskRunScreen({
                   label={
                     cancelling
                       ? unicode
-                        ? 'Cancelando processo…'
-                        : 'Cancelando processo...'
-                      : `Executando ${selected.name} há ${formatElapsed(elapsedMs)}`
+                        ? 'Cancelling process…'
+                        : 'Cancelling process...'
+                      : `Running ${selected.name} for ${formatElapsed(elapsedMs)}`
                   }
                 />
               ) : null}
@@ -353,7 +354,7 @@ export function TaskRunScreen({
             <Box flexDirection={wide ? 'row' : 'column'} gap={wide ? 1 : 0}>
               {wide ? (
                 <Box flexBasis={0} flexGrow={2} minWidth={0}>
-                  <Panel title="TAREFA" width="100%">
+                  <Panel title="TASK" width="100%">
                     <Text bold color={theme.colors.foreground} wrap="truncate-end">
                       {selected.name}
                     </Text>
@@ -373,7 +374,7 @@ export function TaskRunScreen({
                 minWidth={0}
                 width={wide ? undefined : '100%'}
               >
-                <Panel title="EXECUÇÃO ATUAL" width="100%">
+                <Panel title="CURRENT RUN" width="100%">
                   {!wide ? (
                     <Text bold color={theme.colors.foreground} wrap="truncate-end">
                       {selected.name} {separator} {selected.command}
@@ -384,12 +385,12 @@ export function TaskRunScreen({
                     resultStatus={result?.status}
                   />
                   <ProgressBar
-                    aria-label={`Progresso da execução, ${phase === 'running' ? 2 : 3} de 3`}
+                    aria-label={`Run progress, ${phase === 'running' ? 2 : 3} of 3`}
                     max={3}
                     showPercent={false}
                     showValue
                     value={phase === 'running' ? 2 : 3}
-                    valueLabel={`${phase === 'running' ? 2 : 3}/3 etapas`}
+                    valueLabel={`${phase === 'running' ? 2 : 3}/3 steps`}
                     width={progressWidth}
                   />
                   {phase === 'running' ? (
@@ -398,9 +399,9 @@ export function TaskRunScreen({
                       label={
                         cancelling
                           ? unicode
-                            ? 'Cancelando processo…'
-                            : 'Cancelando processo...'
-                          : `Executando há ${formatElapsed(elapsedMs)}`
+                            ? 'Cancelling process…'
+                            : 'Cancelling process...'
+                          : `Running for ${formatElapsed(elapsedMs)}`
                       }
                     />
                   ) : null}
@@ -427,7 +428,7 @@ export function TaskRunScreen({
                 title={resultPresentation(result).title}
                 variant={resultPresentation(result).variant}
               >
-                {`${resultStatusLabel[result.status]} ${separator} código ${
+                {`${resultStatusLabel[result.status]} ${separator} code ${
                   result.exitCode
                 } ${separator} ${formatElapsed(result.durationMs)}`}
               </Alert>
@@ -439,18 +440,16 @@ export function TaskRunScreen({
                   height={resultLogHeight}
                   isActive={inputEnabled}
                   showTimestamp={false}
-                  title="LOG DA EXECUÇÃO"
+                  title="RUN LOG"
                 />
               ) : null}
               {result.outputTruncated ? (
-                <Alert bordered={!compact} title="Saída truncada" variant="warning">
-                  O resultado bruto atingiu o limite de captura; execute o comando diretamente para
-                  inspecionar a saída completa.
+                <Alert bordered={!compact} title="Output truncated" variant="warning">
+                  The raw result reached the capture limit; run the command directly to inspect the
+                  complete output.
                 </Alert>
               ) : null}
-              <Text color={theme.colors.mutedForeground}>
-                R repetir {separator} B voltar às tarefas
-              </Text>
+              <Text color={theme.colors.mutedForeground}>R retry {separator} B back to tasks</Text>
             </Box>
           ) : null}
 
@@ -458,10 +457,10 @@ export function TaskRunScreen({
             <Box flexDirection="column" gap={compact ? 0 : 1}>
               <Alert
                 bordered={!compact}
-                title="Não foi possível concluir a tarefa"
+                title="Unable to complete task"
                 variant={cancelling ? 'warning' : 'error'}
               >
-                {runError ?? 'A execução falhou.'}
+                {runError ?? 'The run failed.'}
               </Alert>
               {logs.length > 0 ? (
                 <LogPanel
@@ -471,12 +470,10 @@ export function TaskRunScreen({
                   height={resultLogHeight}
                   isActive={inputEnabled}
                   showTimestamp={false}
-                  title="LOG DA FALHA"
+                  title="FAILURE LOG"
                 />
               ) : null}
-              <Text color={theme.colors.mutedForeground}>
-                R tentar novamente {separator} B voltar
-              </Text>
+              <Text color={theme.colors.mutedForeground}>R retry {separator} B back</Text>
             </Box>
           ) : null}
         </Box>

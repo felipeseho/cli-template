@@ -24,19 +24,19 @@ const flushEffects = async () => {
 describe('dashboard primitives', () => {
   it('renders Alert text and Ink content without nesting layout nodes inside Text', () => {
     const instance = renderWithUnicode(
-      <Alert title="Workspace indisponível" variant="warning">
-        Mensagem simples
+      <Alert title="Workspace unavailable" variant="warning">
+        Simple message
         <Box>
-          <Text>Remediação em Ink</Text>
+          <Text>Remediation in Ink</Text>
         </Box>
       </Alert>,
       false,
     )
 
     const frame = instance.lastFrame() ?? ''
-    expect(frame).toContain('! Workspace indisponível')
-    expect(frame).toContain('Mensagem simples')
-    expect(frame).toContain('Remediação em Ink')
+    expect(frame).toContain('! Workspace unavailable')
+    expect(frame).toContain('Simple message')
+    expect(frame).toContain('Remediation in Ink')
     expect(frame).toContain('+')
     expect(frame).not.toMatch(/[⚠╭╮╰╯]/u)
   })
@@ -52,10 +52,10 @@ describe('dashboard primitives', () => {
     empty.unmount()
 
     const phases = renderWithUnicode(
-      <ProgressBar max={3} showPercent={false} value={1} valueLabel="1/3 etapas" width={3} />,
+      <ProgressBar max={3} showPercent={false} value={1} valueLabel="1/3 steps" width={3} />,
       true,
     )
-    expect(phases.lastFrame()).toContain('█░░ 1/3 etapas')
+    expect(phases.lastFrame()).toContain('█░░ 1/3 steps')
   })
 
   it('moves the Breadcrumb cursor without navigating until Enter and leaves Escape to its parent', async () => {
@@ -77,8 +77,8 @@ describe('dashboard primitives', () => {
           autoFocus
           currentIndex={2}
           items={[
-            {id: 'home', label: 'Início', onSelect: navigateHome},
-            {id: 'tasks', label: 'Tarefas', onSelect: navigateTasks},
+            {id: 'home', label: 'Home', onSelect: navigateHome},
+            {id: 'tasks', label: 'Tasks', onSelect: navigateTasks},
             {id: 'run', label: 'build', onSelect: navigateRun},
           ]}
           onSelect={onSelect}
@@ -124,8 +124,8 @@ describe('dashboard primitives', () => {
         <Box flexDirection="column">
           <Text>{isFocused ? 'launcher focused' : 'launcher idle'}</Text>
           <Dialog
-            cancelLabel="Cancelar"
-            confirmLabel="Executar"
+            cancelLabel="Cancel"
+            confirmLabel="Run"
             onConfirm={() => {
               onConfirm()
               setOpen(false)
@@ -133,7 +133,7 @@ describe('dashboard primitives', () => {
             onOpenChange={setOpen}
             open={open}
             returnFocusId="dialog-launcher"
-            title="Confirmar execução"
+            title="Confirm run"
           >
             npm run -- build
           </Dialog>
@@ -143,21 +143,21 @@ describe('dashboard primitives', () => {
 
     const instance = render(<FocusHarness />)
     await vi.waitFor(() => {
-      expect(instance.lastFrame()).toContain('Confirmar execução')
-      expect(instance.lastFrame()).toContain('[ Executar ]')
+      expect(instance.lastFrame()).toContain('Confirm run')
+      expect(instance.lastFrame()).toContain('[ Run ]')
     })
     await flushEffects()
     instance.stdin.write('\r')
     await vi.waitFor(() => {
       expect(onConfirm).toHaveBeenCalledOnce()
-      expect(instance.lastFrame()).not.toContain('Confirmar execução')
+      expect(instance.lastFrame()).not.toContain('Confirm run')
       expect(instance.lastFrame()).toContain('launcher focused')
     })
     instance.unmount()
 
     const danger = render(
-      <Dialog defaultOpen onCancel={onCancel} title="Remover" variant="danger">
-        Esta ação é destrutiva.
+      <Dialog defaultOpen onCancel={onCancel} title="Remove" variant="danger">
+        This action is destructive.
       </Dialog>,
     )
     await flushEffects()
@@ -167,7 +167,7 @@ describe('dashboard primitives', () => {
     danger.unmount()
 
     const keyboardConfirm = render(
-      <Dialog defaultAction="cancel" defaultOpen onConfirm={onConfirm} title="Executar?" />,
+      <Dialog defaultAction="cancel" defaultOpen onConfirm={onConfirm} title="Run?" />,
     )
     await flushEffects()
     keyboardConfirm.stdin.write('\u001B[C')

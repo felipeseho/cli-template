@@ -29,7 +29,7 @@ export function normalizeRoute(route: InitialRoute = 'home', initialTask?: strin
 }
 
 export function routeBreadcrumbs(route: ScreenRoute): readonly RouteBreadcrumb[] {
-  const home: RouteBreadcrumb = {label: 'Início', route: {screen: 'home'}}
+  const home: RouteBreadcrumb = {label: 'Home', route: {screen: 'home'}}
 
   switch (route.screen) {
     case 'home': {
@@ -39,17 +39,17 @@ export function routeBreadcrumbs(route: ScreenRoute): readonly RouteBreadcrumb[]
       return [home, {label: 'Doctor', route: {screen: 'doctor'}}]
     }
     case 'help': {
-      return [home, {label: 'Ajuda', route: {screen: 'help'}}]
+      return [home, {label: 'Help', route: {screen: 'help'}}]
     }
     case 'task-list': {
-      return [home, {label: 'Tarefas', route: {screen: 'task-list'}}]
+      return [home, {label: 'Tasks', route: {screen: 'task-list'}}]
     }
     case 'task-run': {
       return [
         home,
-        {label: 'Tarefas', route: {screen: 'task-list'}},
+        {label: 'Tasks', route: {screen: 'task-list'}},
         {
-          label: route.taskName ?? 'Executar',
+          label: route.taskName ?? 'Run',
           route,
         },
       ]

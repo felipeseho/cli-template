@@ -135,7 +135,7 @@ export function useTaskRun({
 
       setRunError(
         nextController.signal.aborted
-          ? 'A execução foi cancelada.'
+          ? 'The run was cancelled.'
           : caught instanceof Error
             ? caught.message
             : String(caught),

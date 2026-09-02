@@ -1,5 +1,5 @@
-# Testes do pacote
+# Package tests
 
-Esta pasta é reservada para cenários adicionais do artefato publicado. O smoke
-principal fica em `scripts/smoke-package.mjs`, pois também é executável
-diretamente pela CI e valida o tarball instalado em um diretório temporário.
+This folder is reserved for additional scenarios for the published artifact. The
+main smoke test lives in `scripts/smoke-package.mjs`, because it is also directly
+executable by CI and validates the tarball installed in a temporary directory.

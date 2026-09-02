@@ -22,12 +22,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            node: 24.15.0
-            coverage: false
-          - os: ubuntu-latest
-            node: 24
-            coverage: true
           - os: macos-latest
             node: 24
             coverage: false

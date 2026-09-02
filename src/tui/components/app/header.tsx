@@ -19,10 +19,10 @@ export interface HeaderProps {
 }
 
 const statusLabel: Record<HeaderStatus, string> = {
-  loading: 'CARREGANDO',
-  ready: 'PRONTO',
-  running: 'EXECUTANDO',
-  warning: 'ATENÇÃO',
+  loading: 'LOADING',
+  ready: 'READY',
+  running: 'RUNNING',
+  warning: 'ATTENTION',
 }
 
 export function Header({cwd, description, layout, name, status, version, workspace}: HeaderProps) {
@@ -62,7 +62,7 @@ export function Header({cwd, description, layout, name, status, version, workspa
       <Box height={1} justifyContent="space-between" overflow="hidden">
         <Box flexGrow={1} flexShrink={1} minWidth={0} overflow="hidden">
           <Text color={theme.colors.accent} wrap="truncate-end">
-            {workspace?.name ?? 'workspace não detectado'}
+            {workspace?.name ?? 'workspace not detected'}
             <Text color={theme.colors.mutedForeground}>
               {separator}
               {cwd}
@@ -71,7 +71,7 @@ export function Header({cwd, description, layout, name, status, version, workspa
         </Box>
         {!compact ? (
           <Box flexShrink={0} marginLeft={1}>
-            <Text color={theme.colors.mutedForeground}>/ ações{separator}? ajuda</Text>
+            <Text color={theme.colors.mutedForeground}>/ actions{separator}? help</Text>
           </Box>
         ) : null}
       </Box>

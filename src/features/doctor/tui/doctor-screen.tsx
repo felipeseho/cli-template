@@ -96,8 +96,8 @@ export function DoctorScreen({
     })) ?? []
   const columns: Column<DiagnosticRow>[] = [
     {header: 'Status', key: 'status', width: 7},
-    {header: 'Verificação', key: 'check', width: wide ? 24 : 18},
-    {header: 'Detalhes', key: 'message', width: wide ? 62 : 38},
+    {header: 'Check', key: 'check', width: wide ? 24 : 18},
+    {header: 'Details', key: 'message', width: wide ? 62 : 38},
   ]
   const remediations = report?.checks.filter((check) => check.remediation) ?? []
 
@@ -111,11 +111,11 @@ export function DoctorScreen({
       ) : null}
       {loading ? (
         <StatusMessage variant="loading">
-          {unicode ? 'Executando verificações…' : 'Executando verificações...'}
+          {unicode ? 'Running checks…' : 'Running checks...'}
         </StatusMessage>
       ) : null}
       {!loading && error ? (
-        <Alert title="Não foi possível executar o diagnóstico" variant="error">
+        <Alert title="Unable to run diagnostics" variant="error">
           {error}
         </Alert>
       ) : null}
@@ -151,19 +151,19 @@ export function DoctorScreen({
               />
             </Box>
           ) : (
-            <Panel title={`VERIFICAÇÕES · ${report.checks.length}`}>
+            <Panel title={`CHECKS · ${report.checks.length}`}>
               <Table columns={columns} data={rows} getRowKey={(row) => row.check} />
             </Panel>
           )}
           {remediations.length > 0 && compact ? (
-            <Alert bordered={false} title="Ação recomendada" variant="warning">
+            <Alert bordered={false} title="Recommended action" variant="warning">
               {`${remediations[0]?.label}: ${remediations[0]?.remediation ?? ''}${
                 remediations.length > 1 ? ` (+${remediations.length - 1})` : ''
               }`}
             </Alert>
           ) : null}
           {remediations.length > 0 && !compact ? (
-            <Alert title="AÇÕES RECOMENDADAS" variant="warning">
+            <Alert title="RECOMMENDED ACTIONS" variant="warning">
               <Box flexDirection="column">
                 {remediations.map((check) => (
                   <Text key={check.id} color={theme.colors.foreground}>
@@ -174,13 +174,13 @@ export function DoctorScreen({
             </Alert>
           ) : null}
           <Text color={theme.colors.mutedForeground} dimColor>
-            {report.ok ? 'Ambiente pronto' : 'Atenção necessária'} {separator} R repetir diagnóstico
+            {report.ok ? 'Environment ready' : 'Attention required'} {separator} R rerun diagnostics
           </Text>
         </Box>
       ) : null}
       {loading || error ? (
         <Text color={theme.colors.mutedForeground} dimColor>
-          R repetir diagnóstico
+          R rerun diagnostics
         </Text>
       ) : null}
     </Box>

@@ -35,9 +35,9 @@ export interface HomeScreenProps {
 type RecentRunRow = Record<'duration' | 'status' | 'task', string>
 
 const statusLabel: Record<TaskStatus, string> = {
-  cancelled: 'cancelada',
-  failed: 'falhou',
-  succeeded: 'sucesso',
+  cancelled: 'cancelled',
+  failed: 'failed',
+  succeeded: 'success',
 }
 
 const formatDuration = (durationMs: number): string => {
@@ -57,19 +57,19 @@ function healthMetric(
   readonly value: string
 } {
   if (!report) {
-    return {tone: 'default', value: 'não verificado'}
+    return {tone: 'default', value: 'not checked'}
   }
 
-  const detail = `${report.summary.pass} ok ${separator} ${report.summary.warn} avisos ${separator} ${report.summary.fail} falhas`
+  const detail = `${report.summary.pass} ok ${separator} ${report.summary.warn} warnings ${separator} ${report.summary.fail} failures`
   if (report.summary.fail > 0) {
-    return {detail, tone: 'error', value: 'requer atenção'}
+    return {detail, tone: 'error', value: 'attention required'}
   }
 
   if (report.summary.warn > 0) {
-    return {detail, tone: 'warning', value: 'com avisos'}
+    return {detail, tone: 'warning', value: 'with warnings'}
   }
 
-  return {detail, tone: 'success', value: 'saudável'}
+  return {detail, tone: 'success', value: 'healthy'}
 }
 
 export function HomeScreen({
@@ -95,19 +95,19 @@ export function HomeScreen({
     {
       disabled: !workspace && !loading,
       key: 'tasks',
-      label: 'Explorar tarefas',
+      label: 'Explore tasks',
       shortcut: 'Enter',
     },
     {
       disabled: !firstTask,
       key: 'run',
-      label: firstTask ? `Executar ${firstTask.name}` : 'Executar uma tarefa',
+      label: firstTask ? `Run ${firstTask.name}` : 'Run a task',
     },
-    {key: 'doctor', label: 'Verificar ambiente'},
+    {key: 'doctor', label: 'Check environment'},
   ]
   const actions: MenuItem[] = [
     ...compactActions,
-    {key: 'help', label: 'Ver atalhos', shortcut: '?'},
+    {key: 'help', label: 'View shortcuts', shortcut: '?'},
   ]
 
   const selectAction = (item: MenuItem) => {
@@ -134,45 +134,45 @@ export function HomeScreen({
     }
   }
 
-  const workspaceValue = loading ? 'carregando' : (workspace?.name ?? 'não detectado')
+  const workspaceValue = loading ? 'loading' : (workspace?.name ?? 'not detected')
   const sessionValue = compact
     ? latestRun
       ? `${latestRun.taskName} (${statusLabel[latestRun.status]})`
-      : 'nenhuma execução'
-    : `${recentRuns.length} ${recentRuns.length === 1 ? 'execução' : 'execuções'}`
+      : 'no runs'
+    : `${recentRuns.length} ${recentRuns.length === 1 ? 'run' : 'runs'}`
   const metricCards = [
     {
       detail: loading
         ? unicode
-          ? 'Lendo package.json…'
-          : 'Lendo package.json...'
+          ? 'Reading package.json…'
+          : 'Reading package.json...'
         : (workspace?.packageJsonPath ?? error),
       label: 'Workspace',
       tone: error && !loading ? ('error' as const) : ('default' as const),
       value: workspaceValue,
     },
     {
-      detail: workspace ? 'declarados no package.json' : 'aguardando workspace',
+      detail: workspace ? 'declared in package.json' : 'waiting for workspace',
       label: 'Scripts',
       value: loading || !workspace ? (unicode ? '—' : '-') : String(tasks.length),
     },
     {
       detail: health.detail,
-      label: 'Ambiente',
+      label: 'Environment',
       tone: health.tone,
       value: health.value,
     },
     {
       detail: latestRun
-        ? `última: ${latestRun.taskName} ${separator} ${statusLabel[latestRun.status]}`
+        ? `latest: ${latestRun.taskName} ${separator} ${statusLabel[latestRun.status]}`
         : undefined,
-      label: 'Sessão',
+      label: 'Session',
       value: sessionValue,
     },
   ]
 
   const metrics = compact ? (
-    <Panel title="Visão geral">
+    <Panel title="Overview">
       <Box>
         {metricCards.slice(0, 2).map((metric) => (
           <MetricCard compact key={metric.label} {...metric} />
@@ -195,9 +195,9 @@ export function HomeScreen({
   )
 
   const recentColumns: Column<RecentRunRow>[] = [
-    {header: 'Tarefa', key: 'task', width: wide ? 20 : 16},
+    {header: 'Task', key: 'task', width: wide ? 20 : 16},
     {header: 'Status', key: 'status', width: wide ? 12 : 10},
-    {align: 'right', header: 'Duração', key: 'duration', width: wide ? 10 : 8},
+    {align: 'right', header: 'Duration', key: 'duration', width: wide ? 10 : 8},
   ]
   const historyRows: RecentRunRow[] = recentRuns.slice(0, wide ? 5 : 3).map((run) => ({
     duration: formatDuration(run.durationMs),
@@ -206,11 +206,11 @@ export function HomeScreen({
   }))
 
   const history = (
-    <Panel title="Execuções nesta sessão" width="100%">
+    <Panel title="Runs this session" width="100%">
       {historyRows.length > 0 ? (
         <Table columns={recentColumns} data={historyRows} maxRows={wide ? 5 : 3} />
       ) : (
-        <Text color={theme.colors.mutedForeground}>As tarefas executadas aparecerão aqui.</Text>
+        <Text color={theme.colors.mutedForeground}>Completed tasks will appear here.</Text>
       )}
     </Panel>
   )
@@ -225,7 +225,7 @@ export function HomeScreen({
     <Box flexDirection="column">
       {!compact ? (
         <ScreenTitle
-          description="Ações rápidas e visão geral do projeto atual."
+          description="Quick actions and an overview of the current project."
           title="Dashboard"
         />
       ) : null}
@@ -233,12 +233,12 @@ export function HomeScreen({
       <Box flexDirection="row" gap={1} marginTop={compact ? 0 : 1}>
         <Box flexShrink={0} width={compact ? '100%' : wide ? 34 : 31}>
           <Menu
-            aria-label="Ações rápidas"
+            aria-label="Quick actions"
             autoFocus
             isActive={inputEnabled}
             items={visibleActions}
             onSelect={selectAction}
-            title="Ações rápidas"
+            title="Quick actions"
           />
         </Box>
         {!compact ? <Box flexGrow={1}>{history}</Box> : null}

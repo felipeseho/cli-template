@@ -3,16 +3,16 @@ import type {Key} from 'ink'
 import type {Shortcut} from '@/tui/components/ui/keyboard-shortcuts.js'
 
 export const GLOBAL_SHORTCUTS = [
-  {description: 'Abrir a paleta de comandos', key: '/'},
-  {description: 'Abrir ou fechar a ajuda', key: '?'},
-  {description: 'Voltar ou sair', key: 'Esc'},
-  {description: 'Cancelar tarefa ou sair', key: 'Ctrl+C'},
+  {description: 'Open the command palette', key: '/'},
+  {description: 'Open or close help', key: '?'},
+  {description: 'Go back or exit', key: 'Esc'},
+  {description: 'Cancel task or exit', key: 'Ctrl+C'},
 ] as const satisfies readonly Shortcut[]
 
 export const NAVIGATION_SHORTCUTS = [
-  {category: 'Navegação', description: 'Mover a seleção', key: 'Up / Down'},
-  {category: 'Navegação', description: 'Ativar a seleção', key: 'Enter'},
-  {category: 'Navegação', description: 'Alternar controles', key: 'Tab'},
+  {category: 'Navigation', description: 'Move the selection', key: 'Up / Down'},
+  {category: 'Navigation', description: 'Activate the selection', key: 'Enter'},
+  {category: 'Navigation', description: 'Toggle controls', key: 'Tab'},
   ...GLOBAL_SHORTCUTS.map((shortcut) => ({
     ...shortcut,
     category: 'Global',

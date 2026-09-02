@@ -56,27 +56,27 @@ export function HelpScreen({viewportRows, wide}: HelpScreenProps) {
   const compact = !wide || viewportRows < 28
   const compactShortcuts: Shortcut[] = [
     {
-      description: 'Navegar e alternar foco',
+      description: 'Navigate and toggle focus',
       key: `${unicode ? '↑↓' : 'Up/Down'} / Tab`,
     },
-    {description: 'Ativar seleção', key: 'Enter'},
-    {description: 'Abrir comandos ou ajuda', key: '/ / ?'},
-    {description: 'Voltar, cancelar ou sair', key: 'Esc / Ctrl+C'},
+    {description: 'Activate selection', key: 'Enter'},
+    {description: 'Open commands or help', key: '/ / ?'},
+    {description: 'Go back, cancel, or exit', key: 'Esc / Ctrl+C'},
   ]
   const taskShortcuts: Shortcut[] = [
-    {category: 'Execução', description: 'Confirmar a ação', key: 'Enter / Y'},
-    {category: 'Execução', description: 'Cancelar o diálogo', key: 'Esc / N'},
-    {category: 'Execução', description: 'Repetir após concluir', key: 'R'},
-    {category: 'Execução', description: 'Voltar para tarefas', key: 'B'},
-    {category: 'Log', description: 'Rolar a saída', key: 'J / K'},
+    {category: 'Run', description: 'Confirm the action', key: 'Enter / Y'},
+    {category: 'Run', description: 'Cancel the dialog', key: 'Esc / N'},
+    {category: 'Run', description: 'Retry after completion', key: 'R'},
+    {category: 'Run', description: 'Back to tasks', key: 'B'},
+    {category: 'Log', description: 'Scroll output', key: 'J / K'},
     {category: 'Log', description: 'Alternar FOLLOW/PAUSED', key: 'F'},
   ]
 
   return (
     <Box flexDirection="column">
       <ScreenTitle
-        description={compact ? undefined : 'Atalhos disponíveis em toda a interface.'}
-        title="Ajuda"
+        description={compact ? undefined : 'Shortcuts available throughout the interface.'}
+        title="Help"
       />
       {compact ? (
         <Panel title="ATALHOS ESSENCIAIS">
@@ -85,20 +85,20 @@ export function HelpScreen({viewportRows, wide}: HelpScreenProps) {
       ) : (
         <Box gap={1}>
           <Box flexBasis={0} flexGrow={1} minWidth={0}>
-            <Panel title="NAVEGAÇÃO GLOBAL" width="100%">
+            <Panel title="GLOBAL NAVIGATION" width="100%">
               <ShortcutList shortcuts={[...NAVIGATION_SHORTCUTS]} />
             </Panel>
           </Box>
           <Box flexBasis={0} flexGrow={1} minWidth={0}>
-            <Panel title="TAREFAS E LOGS" width="100%">
+            <Panel title="TASKS AND LOGS" width="100%">
               <ShortcutList shortcuts={taskShortcuts} />
             </Panel>
           </Box>
         </Box>
       )}
       <Box marginTop={compact ? 0 : 1}>
-        <Alert bordered={false} title="Cancelamento seguro" variant="info">
-          Em uma tarefa ativa, Ctrl+C cancela apenas o processo; fora dela, encerra a interface.
+        <Alert bordered={false} title="Safe cancellation" variant="info">
+          In an active task, Ctrl+C only cancels the process; otherwise, it exits the interface.
         </Alert>
       </Box>
     </Box>

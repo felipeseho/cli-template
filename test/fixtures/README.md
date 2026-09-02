@@ -1,5 +1,5 @@
-# Fixtures de teste
+# Test fixtures
 
-Coloque aqui workspaces estáticos que precisem ser compartilhados por mais de
-uma suíte. Os testes atuais criam `package.json` temporários para isolar estado
-e evitar escrita dentro do repositório.
+Place static workspaces here when they need to be shared by more than one suite.
+The current tests create temporary `package.json` files to isolate state and avoid
+writing inside the repository.
