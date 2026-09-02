@@ -25,19 +25,14 @@
 </p>
 
 <p align="center">
-  <a href="#quick-start"><strong>Get started</strong></a>
+  <a href="#quick-start"><strong>Use this template</strong></a>
   ·
   <a href="docs/architecture.md">Explore the architecture</a>
   ·
   <a href="docs/adding-a-command.md">Add a command</a>
 </p>
 
-> [!NOTE]
-> This repository is a template. Before publishing a project created from it, replace `my-cli`,
-> `mycli`, and the placeholder metadata using the
-> [customization checklist](docs/using-the-template.md).
-
-## One core. Two exceptional interfaces.
+## Why this template?
 
 Most CLI projects eventually choose between a script-friendly command surface and a rich
 interactive experience. This template starts with both—and keeps them consistent by design.
@@ -66,29 +61,26 @@ flowchart LR
   results --> tui
 ```
 
-## Why start here?
+## What you get
+### Give humans a first-class terminal experience
 
-### Ship product behavior, not CLI plumbing
+The TUI runs as a single Ink root with a responsive dashboard, searchable tasks, diagnostics,
+keyboard navigation, live output, cancellation, and reliable terminal cleanup.
 
-Command discovery, help, JSON serialization, TTY checks, signal handling, terminal restoration,
-responsive layouts, and package verification are already represented by working examples.
-
-### Keep every interface honest
-
-Core modules cannot import oclif, React, Ink, Execa, or Node.js APIs. ESLint enforces the important
-dependency boundaries so architectural drift is caught during development.
-
-### Automate with confidence
-
-JSON mode emits one clean document without ANSI or progress noise. Expected failures map to stable
-messages and exit codes, while task execution avoids arbitrary shell strings.
-
-### Test what users actually install
-
-The package smoke test builds a real npm tarball, inspects its contents, installs it in a temporary
-workspace, and executes the packaged binary.
+<p align="center">
+  <img
+    src="./docs/assets/task-browser.png"
+    alt="Interactive task browser showing package.json scripts in MYCLI."
+    width="100%"
+  />
+</p>
 
 ## Quick start
+
+> [!NOTE]
+> This repository is a template. Before publishing a project created from it, replace `my-cli`,
+> `mycli`, and the placeholder metadata using the
+> [customization checklist](docs/using-the-template.md).
 
 ### Requirements
 
@@ -98,6 +90,8 @@ workspace, and executes the packaged binary.
 - A TTY-capable terminal for the dashboard; text and JSON modes also work without one
 
 ### Run the template
+
+Create a repository from this GitHub template, clone it, then run:
 
 ```bash
 npm install
@@ -121,17 +115,15 @@ npm run dev -- doctor
 npm run dev -- task list
 ```
 
-## See it in action
+## Command experience
 
-| Command                                | What it demonstrates                                                       |
-| -------------------------------------- | -------------------------------------------------------------------------- |
-| `mycli`                                | Opens Dashboard Home with a TTY; otherwise prints branded help             |
-| `mycli task list`                      | Opens the task browser with a TTY; otherwise lists scripts as text         |
-| `mycli task run <script>`              | Opens the task runner with a TTY; otherwise streams safe text output       |
-| `mycli doctor`                         | Opens diagnostics with a TTY; otherwise prints the diagnostic report       |
-| `mycli ... --no-interactive`           | Forces plain human-readable output, even when a TTY is available           |
-| `mycli ... --json`                     | Emits one machine-readable JSON document without ANSI; JSON takes priority |
-| `mycli ... --help` or `mycli help ...` | Shows compact static help with the same purple-and-cyan product identity   |
+| Command                   | With a TTY                        | Without a TTY / `--no-interactive` |
+| ------------------------- | --------------------------------- | ---------------------------------- |
+| `mycli`                   | Opens Dashboard Home              | Shows branded root help            |
+| `mycli task list`         | Opens the searchable task browser | Lists scripts as text              |
+| `mycli task run <script>` | Opens the task runner             | Streams safe text output           |
+| `mycli doctor`            | Opens diagnostics                 | Prints the diagnostic report       |
+| `mycli ... --json`        | Emits JSON; takes priority        | Emits JSON                         |
 
 Delivery is adaptive: commands with a dashboard route mount that route when stdin and stdout are
 TTYs, and fall back to plain text when either stream is not a TTY. `--no-interactive` forces that
@@ -148,35 +140,7 @@ Exit codes are part of the contract:
 - `130` for cancellation;
 - the child process exit code when a task fails.
 
-## Help that belongs to the product
-
-Root, topic, command, and parsing-error help use a compact static renderer with the same mark,
-purple, cyan, muted color, and breadcrumb language as the dashboard. It derives content from oclif
-metadata, wraps to the available width up to 80 columns, and never mounts Ink or enters the
-alternate screen. If `NO_COLOR`, `NO_UNICODE`, or `TERM=dumb` applies, help uses the same
-deterministic ANSI-free, ASCII-safe fallback.
-
-## A real terminal application
-
-The TUI runs as a single Ink root in the alternate screen and includes:
-
-- a developer-ops dashboard with a branded header, route breadcrumb, contextual alerts, and
-  responsive metric cards;
-- a workspace-aware home screen with quick actions, environment health, and session history;
-- searchable task discovery and task details;
-- focused confirmation dialogs, honest phase progress, duration, live logs, and cancellation;
-- environment diagnostics with recommendations and refresh;
-- a `/` command palette, `?` help, and keyboard-first navigation;
-- compact, standard, and wide layouts based on terminal width and height.
-
-Running `mycli` enters this dashboard at Home. Running `task list`, `task run`, or `doctor` in a TTY
-uses the same root and navigates directly to the corresponding screen, so command and dashboard
-experiences share navigation, state handling, and visual components.
-
-While a task is running, `Ctrl+C` cancels its process. While idle, `Ctrl+C` exits the application.
-Cleanup restores raw mode, the cursor, and the screen buffer.
-
-## Architecture that scales with the product
+## Architecture
 
 ```text
 src/
@@ -197,7 +161,7 @@ emits TypeScript and then rewrites aliases to valid relative imports with `tsc-a
 Read [Architecture](docs/architecture.md) for dependency rules, runtime flows, and package
 boundaries.
 
-## Create your next command with Codex
+## Customize and develop
 
 This repository includes a project-local `$create-command` skill. Ask Codex to use it and it will
 collect the command ID, description, aliases, arguments, flags, and examples before generating a
@@ -206,7 +170,7 @@ compilable oclif scaffold with a visible `console.log` placeholder.
 For a production feature shared by CLI and TUI, follow
 [Adding a command and screen](docs/adding-a-command.md).
 
-## Development workflow
+### Development workflow
 
 ```bash
 npm run format:check
@@ -221,7 +185,7 @@ npm run smoke:package
 `npm run check` runs the main local quality gate. The package smoke test is intentionally separate
 because it builds and installs the real tarball.
 
-## Own the UI source
+### Own the UI source
 
 termcn follows the shadcn model: component source is copied into the repository and becomes part of
 the product. There is no registry dependency at runtime or in CI. Add, customize, and review
@@ -236,7 +200,7 @@ instead.
 See [Using termcn](docs/termcn.md) for registry aliases, vendored source conventions, themes, and
 Node ESM requirements.
 
-## Make the template yours
+### Make the template yours
 
 The package starts with `"private": true` to prevent accidental publishing. The
 [template guide](docs/using-the-template.md) covers:
