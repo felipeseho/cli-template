@@ -14,6 +14,9 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/felipeseho/cli-template/actions/workflows/ci.yml">
+    <img alt="CI" src="https://github.com/felipeseho/cli-template/actions/workflows/ci.yml/badge.svg" />
+  </a>
   <img alt="Node.js 24.15 or newer" src="https://img.shields.io/badge/Node.js-%3E%3D24.15-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white" />
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-ESM-3178C6?style=flat-square&logo=typescript&logoColor=white" />
   <img alt="oclif 5" src="https://img.shields.io/badge/oclif-5-982BFF?style=flat-square" />
