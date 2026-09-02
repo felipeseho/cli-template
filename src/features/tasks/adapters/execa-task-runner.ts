@@ -80,7 +80,7 @@ export class ExecaTaskRunner implements TaskRunner {
     const stdout = new LimitedOutputBuffer(outputLimit)
     const stderr = new LimitedOutputBuffer(outputLimit)
     const startedAt = performance.now()
-    const subprocess = execa('npm', ['run', '--', task.name], {
+    const subprocess = execa('npm', ['--loglevel=error', 'run', '--', task.name], {
       buffer: false,
       cleanup: true,
       forceKillAfterDelay: 1000,
